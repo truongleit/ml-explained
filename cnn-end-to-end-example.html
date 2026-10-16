@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ví dụ CNN từ đầu đến cuối: quét, loss, backprop</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+
+.g{display:grid;gap:2px}
+.pc{width:42px;height:34px;display:flex;align-items:center;justify-content:center;font-size:12px;border-radius:4px;box-sizing:border-box;color:#222}
+.pc.hl{outline:2px solid #ef9f27;outline-offset:-1px}
+.grids{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;margin-bottom:8px}
+.capt{font-size:12px;color:var(--muted);margin:4px 0}
+.res{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:14px;line-height:1.7}
+.res table{font-size:13px}
+.btns button.on{background:var(--accent-bg);border-color:transparent}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Ví dụ CNN từ đầu đến cuối</h1><p>Một ảnh 4×4, một kernel 2×2: tính tay từng vị trí, ra loss, rồi đi ngược qua dense, max-pool, ReLU và conv.</p></div></header>
+<nav><div class="wrap"><a href="#sa">Đề bài</a><a href="#sb">A. Forward</a><a href="#sc">B. Backward</a><a href="#sd">Nhìn lại</a></div></nav>
+<main class="wrap">
+<section id="sa"><h2>Đề bài</h2>
+<p>Một ảnh 4×4 có một <b>vạch đứng</b> ở cột 1 (dài 2 pixel) và một chấm nhiễu ở góc phải. Nhãn $y=1$ nghĩa là "ảnh có vạch đứng". Ta xây mạng nhỏ nhất có đủ các thành phần của CNN:</p>
+$$X \xrightarrow{\text{Conv }2\times2} z\ (3\times3) \xrightarrow{\text{ReLU}} a \xrightarrow{\text{Max pooling}} m \xrightarrow{\text{Dense}} z_{\text{out}}=v\,m+c \xrightarrow{\sigma} p \xrightarrow{\text{log loss}} L$$
+$$X=\begin{pmatrix}0&1&0&0\\0&1&0&0\\0&0&0&1\\0&0&0&0\end{pmatrix},\quad K=\begin{pmatrix}0.2&-0.1\\0.3&0.1\end{pmatrix},\quad b=0.05,\quad v=1.0,\quad c=-0.5$$
+<p>Tổng cộng chỉ có <b>7 tham số cần học</b>: 4 weight của kernel, $b$, $v$, $c$. Kích thước feature map: $\frac{4-2}{1}+1=3$, tức 3×3 = 9 vị trí. Max pooling ở đây lấy số lớn nhất của cả feature map 3×3 (một khối 3×3 duy nhất).</p></section>
+
+<section id="sb"><h2>A. Forward: quét 9 vị trí</h2>
+<p>Với mỗi vị trí $(i,j)$, lấy ô 2×2 của ảnh (đọc theo hàng), nhân từng cặp với $(0.2,\,-0.1,\,0.3,\,0.1)$, cộng lại rồi cộng $b=0.05$.</p>
+<div class="tw"><table>
+<tr><th>$(i,j)$</th><th>Ô 2×2 (4 pixel theo hàng)</th><th>Tích từng cặp</th><th>Tổng + $b$ = $z$</th><th>$a=\text{ReLU}(z)$</th></tr>
+<tr><td>(0,0)</td><td>0, 1, 0, 1</td><td>0, −0.1, 0, 0.1</td><td>$0+0.05=0.05$</td><td>0.05</td></tr>
+<tr><td><b>(0,1)</b></td><td><b>1, 0, 1, 0</b></td><td><b>0.2, 0, 0.3, 0</b></td><td>$0.5+0.05=\mathbf{0.55}$</td><td><b>0.55</b></td></tr>
+<tr><td>(0,2)</td><td>0, 0, 0, 0</td><td>0, 0, 0, 0</td><td>$0+0.05=0.05$</td><td>0.05</td></tr>
+<tr><td>(1,0)</td><td>0, 1, 0, 0</td><td>0, −0.1, 0, 0</td><td>$-0.1+0.05=-0.05$</td><td><b>0</b></td></tr>
+<tr><td>(1,1)</td><td>1, 0, 0, 0</td><td>0.2, 0, 0, 0</td><td>$0.2+0.05=0.25$</td><td>0.25</td></tr>
+<tr><td>(1,2)</td><td>0, 0, 0, 1</td><td>0, 0, 0, 0.1</td><td>$0.1+0.05=0.15$</td><td>0.15</td></tr>
+<tr><td>(2,0)</td><td>0, 0, 0, 0</td><td>0</td><td>$0.05$</td><td>0.05</td></tr>
+<tr><td>(2,1)</td><td>0, 0, 0, 0</td><td>0</td><td>$0.05$</td><td>0.05</td></tr>
+<tr><td>(2,2)</td><td>0, 1, 0, 0</td><td>0, −0.1, 0, 0</td><td>$-0.05$</td><td><b>0</b></td></tr>
+</table></div>
+<p>Feature map sau ReLU:</p>
+$$a=\begin{pmatrix}0.05&\mathbf{0.55}&0.05\\0&0.25&0.15\\0.05&0.05&0\end{pmatrix}$$
+<p>Vị trí (0,1) có giá trị lớn nhất vì ô 2×2 ở đó chứa đúng vạch đứng ở cột trái, mà cột trái của kernel có weight dương (0.2, 0.3).</p>
+<p><b>Max pooling:</b> $m=\max(a)=0.55$ tại $(0,1)$. <b>Dense:</b> $z_{\text{out}}=1.0\times0.55-0.5=0.05$. <b>Sigmoid:</b> $p=\sigma(0.05)=0.512$. <b>Loss:</b></p>
+$$L=-\ln p=-\ln0.512=\mathbf{0.668}$$
+<p>Mạng đoán 51% là "có vạch đứng", gần như đoán mò, trong khi nhãn thật là 1.</p>
+<p><b>Hình 1</b> cho bạn kéo kernel qua từng vị trí từ 1 đến 9.</p>
+<div class="widget"><h4>Hình 1: Quét kernel qua 9 vị trí, rồi ra loss</h4>
+<div class="ctrl"><div><label>Vị trí số <b id="pv">1</b> / 9</label><input id="p" type="range" min="1" max="9" step="1" value="1"></div></div>
+<div class="btns"><button id="prev">◀</button><button id="next">▶</button><button id="play">▶ Chạy tự động</button></div>
+<div class="grids" style="margin-top:10px">
+<div><div class="capt">Ảnh X 4×4 (khung cam = ô 2×2 đang xét)</div><div class="g" id="gx"></div></div>
+<div><div class="capt">Kernel K</div><div class="g" id="gk"></div></div>
+<div><div class="capt">K × ô ảnh (từng cặp)</div><div class="g" id="gp"></div></div></div>
+<div class="res" id="calc"></div>
+<div class="grids">
+<div><div class="capt">z (3×3) đã quét tới đây</div><div class="g" id="gz"></div></div>
+<div><div class="capt">a = ReLU(z)</div><div class="g" id="ga"></div></div></div>
+<div class="res" id="fin"></div></div>
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li>Ba lưới đầu cho một vị trí: ảnh với khung cam là ô 2×2 đang xét, kernel, và tích từng cặp. Dòng bên dưới cộng chúng lại thành $z$ rồi qua ReLU. Hai lưới 3×3 là feature map đang được lấp dần.</li>
+<li>Kéo từ vị trí 1 đến 9 sẽ khớp từng dòng của bảng ở trên. Vị trí 2 là $(0,1)$ với $z=0.55$, vị trí lớn nhất. Vị trí 4 và 9 ra $z=-0.05$ nên ReLU đưa về 0.</li>
+<li>Ở vị trí 9, ô cuối hiện bước tiếp theo: $m=0.55$, $z_{\text{out}}=0.05$, $p=0.512$, $L=0.668$.</li></ul></div></section>
+
+<section id="sc"><h2>B. Backward: đi ngược từng tầng</h2>
+<p>Quy tắc của backprop: gradient đi từ cuối về đầu, mỗi tầng nhân thêm đạo hàm cục bộ của nó. Ta gọi $\delta$ là gradient của $L$ theo đầu ra của từng tầng.</p>
+<div class="tw"><table>
+<tr><th>Tầng (đi ngược)</th><th>Công thức</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>Sigmoid + log loss</td><td>$\delta=\partial L/\partial z_{\text{out}}=p-y$</td><td>$0.512-1$</td><td><b>−0.4875</b></td></tr>
+<tr><td>Dense</td><td>$\partial L/\partial v=\delta\cdot m$, $\ \partial L/\partial c=\delta$</td><td>$-0.4875\times0.55$</td><td>−0.2681, −0.4875</td></tr>
+<tr><td>Trả về $m$</td><td>$\partial L/\partial m=\delta\cdot v$</td><td>$-0.4875\times1.0$</td><td>−0.4875</td></tr>
+<tr><td><b>Max pooling</b></td><td>gradient chỉ đi về vị trí lớn nhất (0,1), 8 ô còn lại nhận 0</td><td></td><td>$\partial L/\partial a_{(0,1)}=-0.4875$</td></tr>
+<tr><td><b>ReLU</b></td><td>nhân với $\mathbb 1[z>0]$</td><td>$z_{(0,1)}=0.55>0$ nên giữ nguyên</td><td>$\partial L/\partial z_{(0,1)}=-0.4875$</td></tr>
+<tr><td><b>Conv</b></td><td>$\partial L/\partial K[m,n]=\sum_{i,j}\delta_z[i,j]\cdot X[i+m,j+n]$; $\ \partial L/\partial b=\sum\delta_z$</td><td>chỉ còn vị trí (0,1) có $\delta_z\ne0$, ô ảnh ở đó là $(1,0;\,1,0)$</td><td>xem bảng dưới</td></tr>
+</table></div>
+<p>Gradient của kernel chính là $\delta_z$ nhân với <b>các pixel của ô 2×2 tại vị trí (0,1)</b>:</p>
+<div class="tw"><table>
+<tr><th>Weight</th><th>Thế số</th><th>Gradient</th></tr>
+<tr><td>$K[0,0]$</td><td>$-0.4875\times X[0,1]=-0.4875\times1$</td><td><b>−0.4875</b></td></tr>
+<tr><td>$K[0,1]$</td><td>$-0.4875\times X[0,2]=-0.4875\times0$</td><td>0</td></tr>
+<tr><td>$K[1,0]$</td><td>$-0.4875\times X[1,1]=-0.4875\times1$</td><td><b>−0.4875</b></td></tr>
+<tr><td>$K[1,1]$</td><td>$-0.4875\times X[1,2]=-0.4875\times0$</td><td>0</td></tr>
+<tr><td>$b$</td><td>$\delta_z$</td><td>−0.4875</td></tr>
+</table></div>
+<div class="note">Kiểm tra: tăng $K[0,0]$ thêm một chút và đo lại $L$ cho đạo hàm số −0.4875, khớp. Điều đáng chú ý: <b>chỉ những weight đã nhân với pixel sáng trong ô chiến thắng mới nhận gradient</b>. $K[0,1]$ và $K[1,1]$ nhân với pixel 0 nên không đổi.</div>
+<p><b>Cập nhật với $\alpha=0.5$:</b> mỗi tham số $\theta\leftarrow\theta-0.5\times\text{gradient}$.</p>
+<div class="tw"><table>
+<tr><th>Tham số</th><th>Trước</th><th>Gradient</th><th>Sau</th></tr>
+<tr><td>$K[0,0]$</td><td>0.2</td><td>−0.4875</td><td><b>0.444</b></td></tr>
+<tr><td>$K[0,1]$</td><td>−0.1</td><td>0</td><td>−0.1</td></tr>
+<tr><td>$K[1,0]$</td><td>0.3</td><td>−0.4875</td><td><b>0.544</b></td></tr>
+<tr><td>$K[1,1]$</td><td>0.1</td><td>0</td><td>0.1</td></tr>
+<tr><td>$b$</td><td>0.05</td><td>−0.4875</td><td>0.294</td></tr>
+<tr><td>$v$</td><td>1.0</td><td>−0.2681</td><td>1.134</td></tr>
+<tr><td>$c$</td><td>−0.5</td><td>−0.4875</td><td>−0.256</td></tr>
+</table></div>
+<p>Forward lại: vị trí (0,1) giờ cho $z=0.444+0.544+0.294=1.281$, nên $m=1.281$, $p=\sigma(1.134\times1.281-0.256)=0.768$ và $L=\mathbf{0.264}$ (giảm từ 0.668). Kernel đã được kéo về hướng "cột trái dương" để bắt vạch đứng mạnh hơn.</p>
+<p><b>Hình 2</b> cho bạn xem toàn bộ quá trình ngược này theo từng tầng, ở bất kỳ epoch nào.</p>
+<div class="widget"><h4>Hình 2: Backprop qua Dense, Max-pool, ReLU, Conv</h4>
+<div class="ctrl"><div><label>Epoch = <b id="ev">0</b></label><input id="e" type="range" min="0" max="40" step="1" value="0"></div>
+<div><label>α (learning rate) = <b id="av">0.5</b></label><input id="a" type="range" min="0.1" max="2" step="0.1" value="0.5"></div></div>
+<div class="btns"><button id="play2">▶ Chạy tự động</button></div>
+<div class="metrics"><div class="metric"><div class="l">Loss L</div><div class="v" id="mL">-</div></div><div class="metric"><div class="l">p (dự đoán)</div><div class="v" id="mp">-</div></div><div class="metric"><div class="l">m (max)</div><div class="v" id="mm">-</div></div><div class="metric"><div class="l">Vị trí thắng</div><div class="v" id="mw">-</div></div></div>
+<div class="btns" id="st"></div>
+<div class="grids" style="margin-top:10px">
+<div><div class="capt">Ảnh X (khung cam = ô thắng)</div><div class="g" id="gx2"></div></div>
+<div><div class="capt" id="g2t">δ trên feature map 3×3</div><div class="g" id="g2"></div></div>
+<div><div class="capt" id="g3t">Kernel K</div><div class="g" id="g3"></div></div></div>
+<div class="res" id="pn"></div>
+<div class="chart" style="height:190px"><canvas id="cl"></canvas></div></div>
+<div class="how"><h4>Cách đọc Hình 2</h4><ul>
+<li><b>Thanh Epoch</b> chọn trạng thái của mạng sau chừng đó lần cập nhật (mỗi epoch chỉ có 1 ảnh nên là 1 lần cập nhật). <b>6 nút</b> chọn tầng bạn muốn xem khi đi ngược từ cuối về đầu; đoạn văn bên dưới thế số cho đúng epoch và tầng đang chọn.</li>
+<li><b>Ở epoch 0</b>, bấm lần lượt từng nút để đối chiếu với bảng ở trên: $\delta=-0.4875$, gradient chỉ vào ô $(0,1)$, rồi kernel nhận $(-0.4875,\,0;\,-0.4875,\,0)$. Nút "6. Cập nhật" cho đúng bảng Trước/Sau: $K[0,0]=0.444$, $K[1,0]=0.544$, $b=0.294$, $v=1.134$, $c=-0.256$, và loss giảm từ 0.668 xuống <b>0.264</b>.</li>
+<li><b>Nút "3. Max-pool"</b>: lưới giữa chỉ có một ô khác 0 (ô thắng), tám ô còn lại bằng 0. Đây là điều khác với convolution thông thường: gradient chỉ chảy về nơi đã "quyết định" kết quả.</li>
+<li><b>Nút "5. Kernel"</b>: lưới phải cho thấy hai weight cột trái nhận gradient âm, hai weight cột phải bằng 0. Lý do hiện ngay trên đoạn văn: ô ảnh tại vị trí thắng là $(1,0,1,0)$, và pixel 0 nhân gradient ra 0.</li>
+<li><b>Kéo epoch lên (α = 0.5):</b> epoch 1: $L=0.264$, $m\approx1.28$. Epoch 2: $L\approx0.126$. Epoch 5: $L\approx0.039$. Epoch 10: $L\approx0.016$. Epoch 40: $L\approx0.003$. Kernel cột trái ngày càng dương, $m$ tăng dần (đến khoảng 2.98 ở epoch 40), $p$ tiến tới 1. Vị trí thắng vẫn là $(0,1)$ suốt quá trình.</li>
+<li><b>Thử đổi α:</b> α = 2 thì loss giảm gần như tức thì; α = 0.1 thì giảm từ từ.</li></ul></div></section>
+
+<section id="sd"><h2>Nhìn lại cả quy trình</h2>
+<div class="tw"><table>
+<tr><th>Giai đoạn</th><th>Việc làm</th><th>Công thức</th></tr>
+<tr><td>Forward</td><td>Quét kernel qua 9 vị trí</td><td>$z[i,j]=\sum K\cdot X+b$</td></tr>
+<tr><td>Forward</td><td>ReLU, rồi lấy số lớn nhất</td><td>$a=\max(0,z)$, $m=\max a$</td></tr>
+<tr><td>Forward</td><td>Dense, sigmoid, loss</td><td>$p=\sigma(vm+c)$, $L=-\ln p$</td></tr>
+<tr><td>Backward</td><td>Sai số ở đầu ra</td><td>$\delta=p-y$</td></tr>
+<tr><td>Backward</td><td>Dense</td><td>$\partial L/\partial v=\delta m$, $\ \partial L/\partial m=\delta v$</td></tr>
+<tr><td>Backward</td><td>Max-pool, ReLU</td><td>gradient chỉ vào ô thắng, rồi nhân $\mathbb 1[z>0]$</td></tr>
+<tr><td>Backward</td><td>Conv</td><td>$\partial L/\partial K[m,n]=\sum\delta_z[i,j]\,X[i+m,j+n]$</td></tr>
+<tr><td>Cập nhật</td><td>Gradient Descent</td><td>$\theta\leftarrow\theta-\alpha\,\partial L/\partial\theta$</td></tr>
+</table></div>
+<p>Với nhiều ảnh, mọi gradient trên được tính cho từng ảnh rồi lấy trung bình; với nhiều kernel hay nhiều tầng thì lặp lại đúng các bước này tầng này sang tầng khác.</p></section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script>
+var RED='#e34948',ORG='#ef9f27';
+function fmt(t){var r=Math.round(t*1000)/1000;return (r===0?0:r).toString();}
+function colr(t,mx){var q=Math.min(1,Math.abs(t)/mx);return t>=0?'rgba(42,120,214,'+(0.1+0.6*q)+')':'rgba(227,73,72,'+(0.1+0.6*q)+')';}
+function setG(id,n,h){var g=document.getElementById(id);g.style.gridTemplateColumns='repeat('+n+',42px)';g.innerHTML=h;}
+function cell(t,bg,ex,st){return '<div class="pc '+(ex||'')+'" style="background:'+bg+';'+(st||'')+'">'+t+'</div>';}
+function gray(t){var g=Math.round(255-t*200);return 'rgb('+g+','+g+','+g+')';}
+var X=[[0,1,0,0],[0,1,0,0],[0,0,0,1],[0,0,0,0]],y=1;
+/* Hinh 1 */
+(function(){
+var K=[[0.2,-0.1],[0.3,0.1]],b=0.05,v=1.0,c=-0.5;
+var Z=[],A=[];
+for(var i=0;i<3;i++)for(var j=0;j<3;j++){var s=b;for(var m=0;m<2;m++)for(var n=0;n<2;n++)s+=K[m][n]*X[i+m][j+n];Z.push(s);A.push(Math.max(0,s));}
+function draw(){
+ var pos=+document.getElementById('p').value,idx=pos-1,ci=Math.floor(idx/3),cj=idx%3;
+ document.getElementById('pv').textContent=pos;
+ var h='';for(var i=0;i<4;i++)for(var j=0;j<4;j++){var inw=i>=ci&&i<ci+2&&j>=cj&&j<cj+2;h+=cell(X[i][j],gray(X[i][j]),inw?'hl':'','color:'+(X[i][j]>0.5?'#fff':'#222'));}setG('gx',4,h);
+ h='';for(var m=0;m<2;m++)for(var n=0;n<2;n++)h+=cell(fmt(K[m][n]),colr(K[m][n],0.5));setG('gk',2,h);
+ h='';var sum=0,terms=[];for(var m=0;m<2;m++)for(var n=0;n<2;n++){var pr=K[m][n]*X[ci+m][cj+n];sum+=pr;terms.push(fmt(K[m][n])+'×'+X[ci+m][cj+n]);h+=cell(fmt(pr),colr(pr,0.5));}setG('gp',2,h);
+ document.getElementById('calc').innerHTML='Vị trí (i, j) = ('+ci+', '+cj+'): z = '+terms.join(' + ')+' + b('+b+') = <b>'+fmt(sum+b)+'</b> → ReLU = <b>'+fmt(Math.max(0,sum+b))+'</b>';
+ h='';for(var k=0;k<9;k++)h+=cell(k<pos?fmt(Z[k]):'·',k<pos?colr(Z[k],0.6):'transparent',k===idx?'hl':'');setG('gz',3,h);
+ h='';var mx=-1,mi=-1;for(var k=0;k<9;k++){if(k<pos&&A[k]>mx){mx=A[k];mi=k;}}
+ for(var k=0;k<9;k++)h+=cell(k<pos?fmt(A[k]):'·',k<pos?colr(A[k],0.6):'transparent',k===mi?'hl':'');setG('ga',3,h);
+ if(pos<9){document.getElementById('fin').innerHTML='Max đến hiện tại: <b>'+fmt(mx)+'</b> tại vị trí ('+Math.floor(mi/3)+', '+(mi%3)+'). Quét hết 9 vị trí để xem bước tiếp theo.';}
+ else{var zo=v*mx+c,p=1/(1+Math.exp(-zo)),L=-Math.log(p);
+  document.getElementById('fin').innerHTML='<b>Max pooling:</b> m = max(a) = <b>'+fmt(mx)+'</b> tại ('+Math.floor(mi/3)+', '+(mi%3)+') (khung cam).<br><b>Dense:</b> z_out = v·m + c = '+v+'×'+fmt(mx)+' + ('+c+') = <b>'+fmt(zo)+'</b><br><b>Sigmoid:</b> p = σ('+fmt(zo)+') = <b>'+fmt(p)+'</b><br><b>Loss:</b> L = −ln p = −ln '+fmt(p)+' = <b>'+fmt(L)+'</b> (nhãn thật y = 1)';}
+}
+document.getElementById('p').oninput=draw;
+document.getElementById('prev').onclick=function(){var e=document.getElementById('p');e.value=Math.max(1,+e.value-1);draw();};
+document.getElementById('next').onclick=function(){var e=document.getElementById('p');e.value=Math.min(9,+e.value+1);draw();};
+var timer=null;
+document.getElementById('play').onclick=function(){var bt=this;if(timer){clearInterval(timer);timer=null;bt.textContent='▶ Chạy tự động';return;}
+ var e=document.getElementById('p');if(+e.value>=9)e.value=1;draw();bt.textContent='⏸ Dừng';
+ timer=setInterval(function(){if(+e.value>=9){clearInterval(timer);timer=null;bt.textContent='▶ Chạy tự động';return;}e.value=+e.value+1;draw();},800);};
+draw();
+})();
+/* Hinh 2 */
+(function(){
+var NE=40;
+function sg(z){return 1/(1+Math.exp(-z));}
+function init(){return {K:[[0.2,-0.1],[0.3,0.1]],b:0.05,v:1.0,c:-0.5};}
+function cl(P){return {K:[P.K[0].slice(),P.K[1].slice()],b:P.b,v:P.v,c:P.c};}
+function fwd(P){var Z=[],A=[],best=-1,bi=0;for(var i=0;i<3;i++)for(var j=0;j<3;j++){var s=P.b;for(var m=0;m<2;m++)for(var n=0;n<2;n++)s+=P.K[m][n]*X[i+m][j+n];Z.push(s);var a=Math.max(0,s);A.push(a);if(a>best){best=a;bi=Z.length-1;}}
+ var zo=P.v*best+P.c,p=sg(zo);return {Z:Z,A:A,m:best,w:bi,zo:zo,p:p,L:-Math.log(p)};}
+function grad(P){var f=fwd(P),d=f.p-y,dm=d*P.v,wz=f.Z[f.w],dz=wz>0?dm:0,wi=Math.floor(f.w/3),wj=f.w%3;
+ var gK=[[0,0],[0,0]];for(var m=0;m<2;m++)for(var n=0;n<2;n++)gK[m][n]=dz*X[wi+m][wj+n];
+ return {f:f,d:d,dm:dm,dz:dz,wi:wi,wj:wj,gK:gK,gb:dz,gv:d*f.m,gc:d};}
+function stepP(P,al){var g=grad(P),Q=cl(P);for(var m=0;m<2;m++)for(var n=0;n<2;n++)Q.K[m][n]-=al*g.gK[m][n];Q.b-=al*g.gb;Q.v-=al*g.gv;Q.c-=al*g.gc;return Q;}
+var S=[],stage=1;
+function build(){var al=+document.getElementById('a').value;S=[init()];for(var k=0;k<NE;k++)S.push(stepP(S[k],al));}
+var ch=new Chart(document.getElementById('cl'),{type:'line',data:{labels:[],datasets:[{label:'Loss L',data:[],borderColor:RED,pointRadius:0,borderWidth:2},{label:'Epoch đang xem',data:[],showLine:false,pointRadius:6,backgroundColor:ORG,borderColor:ORG}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'Epoch'}},y:{min:0,title:{display:true,text:'L'}}}}});
+var NAMES=['1. Forward','2. Dense','3. Max-pool','4. ReLU','5. Kernel','6. Cập nhật'];
+function stBtns(){var h=document.getElementById('st');h.innerHTML='<span class="capt" style="margin:0 8px 0 0">Tầng (đi ngược):</span>';NAMES.forEach(function(n,i){var b=document.createElement('button');b.textContent=n;if(i+1===stage)b.className='on';b.onclick=function(){stage=i+1;draw();};h.appendChild(b);});}
+function draw(){
+ var k=+document.getElementById('e').value,P=S[k],g=grad(P),f=g.f,al=+document.getElementById('a').value;
+ document.getElementById('ev').textContent=k;document.getElementById('av').textContent=al.toFixed(1);
+ document.getElementById('mL').textContent=fmt(f.L);document.getElementById('mp').textContent=fmt(f.p);document.getElementById('mm').textContent=fmt(f.m);document.getElementById('mw').textContent='('+g.wi+', '+g.wj+')';
+ stBtns();
+ var h='';for(var i=0;i<4;i++)for(var j=0;j<4;j++){var inw=i>=g.wi&&i<g.wi+2&&j>=g.wj&&j<g.wj+2;h+=cell(X[i][j],gray(X[i][j]),inw?'hl':'','color:'+(X[i][j]>0.5?'#fff':'#222'));}setG('gx2',4,h);
+ var t2,vals2;
+ if(stage<=2){t2='z trên feature map 3×3 (khung cam = max)';vals2=f.Z;}
+ else if(stage===3){t2='∂L/∂a: chỉ ô thắng nhận gradient';vals2=f.Z.map(function(_,i){return i===f.w?g.dm:0;});}
+ else{t2='∂L/∂z sau ReLU';vals2=f.Z.map(function(_,i){return i===f.w?g.dz:0;});}
+ document.getElementById('g2t').textContent=t2;
+ var mxv=Math.max.apply(null,vals2.map(Math.abs).concat([0.01]));
+ h='';for(var q=0;q<9;q++)h+=cell(fmt(vals2[q]),colr(vals2[q],mxv),q===f.w?'hl':'');setG('g2',3,h);
+ document.getElementById('g3t').textContent=stage===5?'∂L/∂K':(stage===6?'K mới = K − α·∂L/∂K':'Kernel K');
+ h='';for(var m=0;m<2;m++)for(var n=0;n<2;n++){var val=stage===5?g.gK[m][n]:(stage===6?P.K[m][n]-al*g.gK[m][n]:P.K[m][n]);h+=cell(fmt(val),colr(val,stage===5?0.6:1));}setG('g3',2,h);
+ var t='';
+ var win=[X[g.wi][g.wj],X[g.wi][g.wj+1],X[g.wi+1][g.wj],X[g.wi+1][g.wj+1]];
+ if(stage===1){t='<b>Forward.</b> Vị trí thắng ('+g.wi+', '+g.wj+') có a = '+fmt(f.A[f.w])+', nên m = '+fmt(f.m)+'. z_out = v·m + c = '+fmt(P.v)+'×'+fmt(f.m)+' + ('+fmt(P.c)+') = <b>'+fmt(f.zo)+'</b>. p = σ(z_out) = <b>'+fmt(f.p)+'</b>. L = −ln p = <b>'+fmt(f.L)+'</b> (y = 1).';}
+ else if(stage===2){t='<b>Tầng Dense + Sigmoid.</b> δ = p − y = '+fmt(f.p)+' − 1 = <b>'+fmt(g.d)+'</b>.<br>∂L/∂v = δ·m = '+fmt(g.d)+'×'+fmt(f.m)+' = <b>'+fmt(g.gv)+'</b>; ∂L/∂c = δ = <b>'+fmt(g.gc)+'</b>.';}
+ else if(stage===3){t='<b>Qua Max-pool.</b> ∂L/∂m = δ·v = '+fmt(g.d)+'×'+fmt(P.v)+' = <b>'+fmt(g.dm)+'</b>. Gradient chỉ đi vào vị trí lớn nhất ('+g.wi+', '+g.wj+'); 8 ô còn lại nhận 0 (xem lưới giữa).';}
+ else if(stage===4){t='<b>Qua ReLU.</b> ∂L/∂z = ∂L/∂a · 1[z>0]. Tại ô thắng z = '+fmt(f.Z[f.w])+(f.Z[f.w]>0?' > 0 nên giữ nguyên: ':' ≤ 0 nên bị chặn: ')+'<b>'+fmt(g.dz)+'</b>.';}
+ else if(stage===5){t='<b>Gradient của kernel.</b> ∂L/∂K[m,n] = δ_z · X[i*+m, j*+n] với (i*, j*) = ('+g.wi+', '+g.wj+'). Ô ảnh tại đó (theo hàng) = ('+win.join(', ')+') nên gradient = '+fmt(g.dz)+' × ('+win.join(', ')+') (xem lưới phải). ∂L/∂b = δ_z = <b>'+fmt(g.gb)+'</b>. Pixel bằng 0 thì gradient bằng 0.';}
+ else{var Q=stepP(P,al);t='<b>Cập nhật</b> θ ← θ − α·∂L/∂θ với α = '+al.toFixed(1)+':<table><tr><th>Tham số</th><th>Trước</th><th>Gradient</th><th>Sau</th></tr>'+
+  [['K[0,0]',P.K[0][0],g.gK[0][0],Q.K[0][0]],['K[0,1]',P.K[0][1],g.gK[0][1],Q.K[0][1]],['K[1,0]',P.K[1][0],g.gK[1][0],Q.K[1][0]],['K[1,1]',P.K[1][1],g.gK[1][1],Q.K[1][1]],['b',P.b,g.gb,Q.b],['v',P.v,g.gv,Q.v],['c',P.c,g.gc,Q.c]].map(function(r){return '<tr><td>'+r[0]+'</td><td>'+fmt(r[1])+'</td><td>'+fmt(r[2])+'</td><td><b>'+fmt(r[3])+'</b></td></tr>';}).join('')+'</table>Loss sau cập nhật: <b>'+fmt(fwd(Q).L)+'</b> (trước: '+fmt(f.L)+').';}
+ document.getElementById('pn').innerHTML=t;
+ ch.data.datasets[1].data=[{x:k,y:f.L}];ch.update('none');
+}
+function recompute(){build();ch.data.labels=S.map(function(_,i){return i;});ch.data.datasets[0].data=S.map(function(P){return fwd(P).L;});draw();}
+document.getElementById('e').addEventListener('input',draw);
+document.getElementById('a').addEventListener('input',recompute);
+var timer=null;
+document.getElementById('play2').onclick=function(){var bt=this;if(timer){clearInterval(timer);timer=null;bt.textContent='▶ Chạy tự động';return;}
+ var e=document.getElementById('e');if(+e.value>=NE)e.value=0;bt.textContent='⏸ Dừng';
+ timer=setInterval(function(){if(+e.value>=NE){clearInterval(timer);timer=null;bt.textContent='▶ Chạy tự động';return;}e.value=+e.value+1;draw();},300);};
+recompute();
+})();
+</script>
+</body>
+</html>

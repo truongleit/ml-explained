@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neural Network: từ neuron đến backpropagation</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Neural Network (Mạng nơ-ron)</h1><p>Mỗi công thức được suy ra từ công thức trước, tính tay trên 1 record, kèm 3 hình tương tác và cách đọc từng hình.</p></div></header>
+<nav><div class="wrap"><a href="#s1">1. Neuron</a><a href="#s2">2. Vì sao cần lớp ẩn</a><a href="#s3">3. Forward</a><a href="#s4">4. Backprop</a><a href="#s5">5. Training loop</a><a href="#s6">6. XOR</a><a href="#s7">7. Overfitting</a><a href="#s8">8. Tóm tắt</a></div></nav>
+<main class="wrap">
+<section id="s1"><h2>1. Ý tưởng: một neuron chính là Logistic Regression</h2>
+<p>Neural network (mạng nơ-ron) là nhiều "neuron" nhỏ nối với nhau. Một <b>neuron</b> làm đúng 2 việc, mà bạn đã biết từ Logistic Regression:</p>
+$$z = w_1x_1 + w_2x_2 + b \quad\text{(tổng có trọng số, weighted sum)}$$
+$$a = \sigma(z) = \frac{1}{1+e^{-z}} \quad\text{(hàm kích hoạt, activation function)}$$
+<ul>
+<li>$w$ là trọng số (weight), $b$ là bias, $a$ là đầu ra (activation).</li>
+<li>Neural network = xếp các neuron thành <b>lớp (layer)</b>: lớp đầu vào (input layer), một hoặc nhiều lớp ẩn (hidden layer), lớp đầu ra (output layer). Đầu ra của lớp trước là đầu vào của lớp sau.</li>
+</ul></section>
+
+<section id="s2"><h2>2. Vì sao cần lớp ẩn và hàm kích hoạt?</h2>
+<p><b>Vấn đề 1: một neuron chỉ vẽ được 1 đường thẳng.</b> Bài XOR có 4 điểm: (0,0)→0, (0,1)→1, (1,0)→1, (1,1)→0. Không có đường thẳng nào tách được 2 nhóm này, nên Logistic Regression (1 neuron) luôn sai ít nhất 1 trong 4 điểm. Lớp ẩn cho phép vẽ nhiều đường rồi <b>kết hợp</b> chúng lại.</p>
+<p><b>Vấn đề 2: không có activation thì nhiều lớp cũng chỉ là 1 lớp.</b> Suy ra từ công thức neuron (bỏ $\sigma$):</p>
+$$\hat y = w_2\,(W_1x+b_1)+b_2 = \underbrace{(w_2W_1)}_{W'}\,x + \underbrace{(w_2b_1+b_2)}_{b'} = W'x+b'$$
+<p>Ra lại một đường thẳng. Chính phép <b>phi tuyến (non-linear)</b> như $\sigma$ làm cho xếp lớp có ý nghĩa.</p></section>
+
+<section id="s3"><h2>3. Forward pass (lan truyền tiến) trên 1 record</h2>
+<p>Mạng nhỏ <b>2-2-1</b>: 2 đầu vào, 2 neuron ẩn, 1 neuron ra. Dùng sigmoid ở mọi neuron. Ta lấy <b>1 record</b>: $x=(1,\,2)$, nhãn thật $y=1$.</p>
+<div class="tw"><table>
+<tr><th>Tham số</th><th>Giá trị</th></tr>
+<tr><td>Neuron ẩn 1: $w_{11},w_{12},b_1$</td><td>0.5, −0.3, 0.1</td></tr>
+<tr><td>Neuron ẩn 2: $w_{21},w_{22},b_2$</td><td>0.2, 0.4, −0.2</td></tr>
+<tr><td>Neuron ra: $v_1,v_2,c$</td><td>0.6, −0.5, 0.3</td></tr>
+</table></div>
+<div class="tw"><table>
+<tr><th>Bước</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>$z^{(1)}_1$</td><td>$0.5\cdot1+(-0.3)\cdot2+0.1$</td><td>0</td></tr>
+<tr><td>$a_1=\sigma(0)$</td><td>$1/(1+e^{0})$</td><td><b>0.5</b></td></tr>
+<tr><td>$z^{(1)}_2$</td><td>$0.2\cdot1+0.4\cdot2-0.2$</td><td>0.8</td></tr>
+<tr><td>$a_2=\sigma(0.8)$</td><td>$1/(1+e^{-0.8})$</td><td><b>0.690</b></td></tr>
+<tr><td>$z^{(2)}$</td><td>$0.6\cdot0.5+(-0.5)\cdot0.690+0.3$</td><td>0.255</td></tr>
+<tr><td>$p=\sigma(0.255)$</td><td></td><td><b>0.563</b></td></tr>
+</table></div>
+<p>Mạng đoán xác suất "lớp 1" là 0.563, trong khi đáp án là 1, nên còn sai. Ta đo mức sai bằng <b>log loss</b> (đã suy ra ở Logistic Regression từ Maximum Likelihood):</p>
+$$L=-\big[y\ln p+(1-y)\ln(1-p)\big]=-\ln 0.563=\mathbf{0.574}$$
+<p><b>Hình 1</b> cho bạn xem 3 hàm kích hoạt phổ biến và đạo hàm của chúng (đạo hàm sẽ cần ở phần backprop).</p>
+<div class="widget"><h4>Hình 1: Hàm kích hoạt và đạo hàm</h4>
+<div class="ctrl"><div><label>z = <b id="zv">0.80</b></label><input type="range" id="z" min="-6" max="6" step="0.05" value="0.8"></div></div>
+<div class="metrics">
+<div class="metric"><div class="l">σ(z)</div><div class="v" id="s">-</div></div><div class="metric"><div class="l">σ'(z)=σ(1−σ)</div><div class="v" id="sd">-</div></div>
+<div class="metric"><div class="l">tanh(z)</div><div class="v" id="t">-</div></div><div class="metric"><div class="l">tanh'(z)</div><div class="v" id="td">-</div></div>
+<div class="metric"><div class="l">ReLU(z)</div><div class="v" id="r">-</div></div><div class="metric"><div class="l">ReLU'(z)</div><div class="v" id="rd">-</div></div>
+</div>
+<div class="chart" style="height:300px"><canvas id="c1"></canvas></div></div>
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li><b>Trục ngang</b> là $z$ (tổng có trọng số đi vào neuron), <b>trục dọc</b> là đầu ra $a=f(z)$. Ba đường là ba hàm kích hoạt; chấm tròn là giá trị tại $z$ bạn đang chọn.</li>
+<li><b>Cách đọc:</b> kéo $z=0.8$ thì ô σ(z) hiện <b>0.690</b>, đúng bằng $a_2$ ở mục 3. Kéo $z=0$ thì σ(z) = <b>0.5</b> (đúng $a_1$) và σ'(z) = <b>0.25</b>, đúng con số $a(1-a)=0.25$ sẽ dùng ở phần backprop.</li>
+<li><b>Điều cần rút ra:</b> Sigmoid nén mọi $z$ về khoảng (0, 1). Đạo hàm lớn nhất là 0.25 (tại $z=0$) và gần 0 ở hai đầu. Đây là lý do mạng sâu dùng sigmoid dễ bị <b>vanishing gradient</b> (gradient nhỏ dần qua từng lớp, lớp đầu gần như không học được). Tanh giống sigmoid nhưng ra trong (−1, 1), đạo hàm lớn nhất là 1. ReLU $=\max(0,z)$ có đạo hàm 1 khi $z>0$ nên không bị nhỏ dần, vì vậy là lựa chọn mặc định cho lớp ẩn của mạng sâu. Sigmoid thường chỉ giữ ở lớp ra cho bài toán phân loại 2 lớp.</li></ul></div></section>
+
+<section id="s4"><h2>4. Backpropagation: học bằng cách nào?</h2>
+<p>Ta muốn giảm $L$ bằng Gradient Descent: $\theta\leftarrow\theta-\alpha\,\dfrac{\partial L}{\partial\theta}$ cho <b>mọi</b> tham số $\theta$ ($W_1,b_1,v,c$). Vấn đề chỉ là tính $\dfrac{\partial L}{\partial\theta}$. <b>Backpropagation (lan truyền ngược)</b> chính là quy tắc chuỗi (chain rule) áp dụng từ cuối mạng về đầu mạng, và tái sử dụng kết quả trung gian.</p>
+<div class="derive"><span class="tag">SUY RA</span>
+<p><span class="step">Bước A: neuron ra.</span> Từ Logistic Regression ta đã suy ra (sigmoid + log loss, phần $p(1-p)$ triệt tiêu):</p>
+$$\delta^{(2)}\equiv\frac{\partial L}{\partial z^{(2)}}=p-y$$
+<p>Vì $z^{(2)}=v_1a_1+v_2a_2+c$ nên $\dfrac{\partial z^{(2)}}{\partial v_j}=a_j$ và $\dfrac{\partial z^{(2)}}{\partial c}=1$. Chain rule:</p>
+$$\frac{\partial L}{\partial v_j}=\delta^{(2)}\,a_j,\qquad \frac{\partial L}{\partial c}=\delta^{(2)}$$
+<p><span class="step">Bước B: truyền ngược về lớp ẩn.</span> $L$ phụ thuộc $a_j$ qua $z^{(2)}$, và $a_j=\sigma(z^{(1)}_j)$:</p>
+$$\delta^{(1)}_j\equiv\frac{\partial L}{\partial z^{(1)}_j}=\underbrace{\frac{\partial L}{\partial z^{(2)}}}_{\delta^{(2)}}\cdot\underbrace{\frac{\partial z^{(2)}}{\partial a_j}}_{v_j}\cdot\underbrace{\frac{\partial a_j}{\partial z^{(1)}_j}}_{a_j(1-a_j)}=\delta^{(2)}\,v_j\,a_j(1-a_j)$$
+<p>Vì $z^{(1)}_j=w_{j1}x_1+w_{j2}x_2+b_j$:</p>
+$$\frac{\partial L}{\partial w_{ji}}=\delta^{(1)}_j\,x_i,\qquad \frac{\partial L}{\partial b_j}=\delta^{(1)}_j$$</div>
+<div class="note">Quy luật dễ nhớ: <b>gradient của một trọng số = (sai số $\delta$ của neuron nhận nó) × (giá trị đi vào qua trọng số đó)</b>. Và $\delta$ của lớp trước = $\delta$ của lớp sau, nhân trọng số nối, nhân đạo hàm activation.</div>
+<p><b>Thế số (cùng record $x=(1,2),\,y=1$):</b></p>
+<div class="tw"><table>
+<tr><th>Đại lượng</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>$\delta^{(2)}=p-y$</td><td>$0.563-1$</td><td><b>−0.437</b></td></tr>
+<tr><td>$\partial L/\partial v_1$</td><td>$-0.437\times a_1=-0.437\times0.5$</td><td>−0.218</td></tr>
+<tr><td>$\partial L/\partial v_2$</td><td>$-0.437\times0.690$</td><td>−0.301</td></tr>
+<tr><td>$\partial L/\partial c$</td><td>$\delta^{(2)}$</td><td>−0.437</td></tr>
+<tr><td>$\delta^{(1)}_1$</td><td>$-0.437\times0.6\times0.5(1-0.5)$</td><td><b>−0.0655</b></td></tr>
+<tr><td>$\delta^{(1)}_2$</td><td>$-0.437\times(-0.5)\times0.690(1-0.690)$</td><td><b>+0.0467</b></td></tr>
+<tr><td>$\partial L/\partial w_{11},\partial L/\partial w_{12}$</td><td>$\delta^{(1)}_1\times x_1,\ \delta^{(1)}_1\times x_2$</td><td>−0.0655, −0.131</td></tr>
+<tr><td>$\partial L/\partial w_{21},\partial L/\partial w_{22}$</td><td>$\delta^{(1)}_2\times1,\ \delta^{(1)}_2\times2$</td><td>+0.0467, +0.0934</td></tr>
+</table></div>
+<p>(Đã kiểm tra bằng cách thử tăng $w_{11}$ một chút và đo $L$ đổi bao nhiêu: ra −0.0655, khớp.)</p>
+<p><b>Cập nhật với $\alpha=0.5$</b>, ví dụ $v_1\leftarrow0.6-0.5\times(-0.218)=0.709$. Làm cho mọi tham số ta được:</p>
+<div class="tw"><table>
+<tr><th>Tham số</th><th>Trước (epoch 0)</th><th>Sau (epoch 1)</th></tr>
+<tr><td>$v_1,v_2,c$</td><td>0.6, −0.5, 0.3</td><td>0.709, −0.349, 0.518</td></tr>
+<tr><td>$w_{11},w_{12},b_1$</td><td>0.5, −0.3, 0.1</td><td>0.533, −0.235, 0.133</td></tr>
+<tr><td>$w_{21},w_{22},b_2$</td><td>0.2, 0.4, −0.2</td><td>0.177, 0.353, −0.223</td></tr>
+</table></div>
+<p>Chạy lại forward với trọng số mới: $p=0.663$ (tăng từ 0.563, gần đáp án 1 hơn), $L=\mathbf{0.411}$ (giảm từ 0.574). Chỉ một bước đã tốt hơn.</p>
+<p><b>Hình 2</b> vẽ chính mạng 2-2-1 này, hiện <b>từng weight trên từng đường nối</b>. Kéo thanh trượt epoch để xem weight thay đổi sau mỗi lần cập nhật. (Ở bài này mỗi epoch chỉ có 1 record nên 1 epoch = 1 bước cập nhật.)</p>
+<div class="widget"><h4>Hình 2: Weight của mạng 2-2-1 qua từng epoch</h4>
+<div class="ctrl"><div><label>Epoch = <b id="ev">0</b></label><input type="range" id="e" min="0" max="100" step="1" value="0"></div>
+<div><label>α (learning rate) = <b id="av">0.5</b></label><input type="range" id="a" min="0.1" max="3" step="0.1" value="0.5"></div></div>
+<div class="btns"><button id="play">▶ Chạy tự động</button></div>
+<svg id="svg" viewBox="0 0 680 330" style="width:100%;display:block"></svg>
+<div class="lg2">Đường xanh = weight dương, đường đỏ = weight âm; đường càng dày thì |weight| càng lớn. Chữ trên đường là giá trị weight. Số trong vòng tròn: đầu vào x, đầu ra lớp ẩn a, dự đoán p.</div>
+<div class="metrics"><div class="metric"><div class="l">p (dự đoán)</div><div class="v" id="p">-</div></div><div class="metric"><div class="l">Loss L</div><div class="v" id="L">-</div></div><div class="metric"><div class="l">Đáp án y</div><div class="v">1</div></div></div>
+<div class="tw"><table id="tb"></table></div>
+<div class="chart" style="height:200px"><canvas id="c2"></canvas></div></div>
+<div class="how"><h4>Cách đọc Hình 2</h4><ul>
+<li><b>Sơ đồ:</b> từ trái sang phải là lớp input (x₁=1, x₂=2), lớp ẩn (2 neuron), lớp output (1 neuron). Mỗi đường nối có <b>một weight</b> ghi trên đường: xanh là dương, đỏ là âm, đường dày nghĩa là |weight| lớn. Dưới mỗi neuron ẩn và neuron ra là bias ($b_1,b_2,c$).</li>
+<li><b>Thanh trượt Epoch:</b> mỗi vị trí là trạng thái của mạng sau chừng đó lần cập nhật. Bảng bên dưới so epoch 0 với epoch hiện tại.</li>
+<li><b>Cách đọc:</b> Epoch 0 hiện đúng các số ở mục 3 ($w_{11}=0.500$, $v_1=0.600$, $a_2=0.690$, $p=0.563$, $L=0.574$). Epoch 1: $v_1=0.709$, $c=0.518$, $p=0.663$, $L=0.411$, khớp bảng "Trước/Sau" ở mục 4. Epoch 10: $p\approx0.914$, $L\approx0.090$; $v_2$ đã đổi dấu từ −0.5 sang <b>+0.162</b> (đường nối từ neuron ẩn 2 chuyển từ đỏ sang xanh). Epoch 100: $p\approx0.992$, $L\approx0.008$, $v_1\approx2.07$, $c\approx2.31$.</li>
+<li><b>Điều cần rút ra:</b> weight nào có gradient lớn thì đổi nhiều. Các weight ở lớp ra ($v,c$) đổi nhanh hơn weight ở lớp ẩn, vì $\delta^{(1)}$ nhỏ hơn $\delta^{(2)}$ nhiều (bị nhân thêm $v_j$ và $a(1-a)\le0.25$). Đồ thị loss giảm nhanh lúc đầu rồi chậm dần, vì khi $p$ gần 1 thì $\delta^{(2)}=p-y$ gần 0 nên bước cập nhật nhỏ lại. Kéo $\alpha$ lên cao thì weight nhảy mạnh hơn mỗi epoch; $\alpha$ thấp thì đổi từ từ.</li></ul></div></section>
+
+<section id="s5"><h2>5. Training loop trên nhiều record</h2>
+<p>Thực tế có $n$ record. Gradient của cả tập là <b>trung bình</b> gradient từng record (vì cost $J=\frac1n\sum L_i$):</p>
+<ol>
+<li><b>Khởi tạo</b> trọng số ngẫu nhiên nhỏ. Không được khởi tạo toàn 0, vì khi đó các neuron ẩn giống hệt nhau, nhận gradient giống hệt nhau và mãi mãi giống nhau (symmetry).</li>
+<li><b>Forward</b> cho mọi record để tính $J$.</li>
+<li><b>Backward</b> (backprop) để tính $\partial J/\partial\theta$ cho mọi tham số.</li>
+<li><b>Cập nhật</b> $\theta\leftarrow\theta-\alpha\,\partial J/\partial\theta$.</li>
+<li>Lặp lại. Mỗi lượt qua toàn bộ dữ liệu gọi là một <b>epoch</b>. Có thể dùng mini-batch hoặc SGD như đã nói ở phần Gradient Descent.</li></ol>
+<p>Vì sao phải dùng GD ở đây: hàm $J$ của mạng nhiều lớp <b>không lồi (non-convex)</b> và không có công thức đóng, nên không giải bằng cách cho đạo hàm bằng 0 như Linear Regression.</p></section>
+
+<section id="s6"><h2>6. XOR: thấy lớp ẩn làm được gì</h2>
+<p><b>Hình 3</b> huấn luyện mạng 2-H-1 (lớp ẩn dùng tanh, $H$ là số neuron ẩn) trên bài XOR có nhiễu: 4 cụm điểm, mỗi cụm 5 điểm. Bạn chọn $H$, bấm huấn luyện và xem vùng quyết định thay đổi.</p>
+<div class="widget"><h4>Hình 3: XOR với số neuron ẩn khác nhau</h4>
+<div class="ctrl"><div><label>H (neuron ẩn) = <b id="hv">2</b></label><input type="range" id="h" min="1" max="4" step="1" value="2"></div></div>
+<div class="btns"><button id="t200">Train 200 epoch</button><button id="t1500">Train 1500 epoch</button><button id="rs">Reset</button></div>
+<div class="metrics"><div class="metric"><div class="l">Epoch</div><div class="v" id="ep">0</div></div><div class="metric"><div class="l">Loss J</div><div class="v" id="Lx">-</div></div><div class="metric"><div class="l">Accuracy</div><div class="v" id="ac">-</div></div></div>
+<canvas id="cv3" class="sq" width="420" height="420"></canvas>
+<div class="lg2">Nền xanh = mạng dự đoán lớp 1, nền đỏ = lớp 0 (đậm nhạt theo xác suất). ● lớp 1, ◆ lớp 0. Trục ngang x₁, trục dọc x₂, cả hai từ −0.5 đến 1.5.</div>
+<div class="chart" style="height:200px"><canvas id="c3"></canvas></div></div>
+<div class="how"><h4>Cách đọc Hình 3</h4><ul>
+<li><b>Ô vuông lớn</b> là mặt phẳng $(x_1,x_2)$. Màu nền cho biết mạng dự đoán lớp nào tại mỗi điểm. Bốn cụm điểm nằm ở bốn góc: (0,0) và (1,1) thuộc lớp 0 (◆ đỏ), (0,1) và (1,0) thuộc lớp 1 (● xanh).</li>
+<li>Đặt $H=1$ rồi bấm "Train 1500 epoch": một neuron ẩn chỉ cho ra một ranh giới đơn giản, accuracy kẹt ở <b>75%</b> (loss khoảng 0.48). Đây là giới hạn của "một đường thẳng" ở mục 2.</li>
+<li>Đặt $H=2$ rồi bấm "Train 1500 epoch": accuracy lên <b>100%</b>, loss gần 0, vùng xanh có dạng dải chéo nối hai góc lớp 1. Hai neuron ẩn tương ứng hai đường, neuron ra kết hợp chúng. $H=3,4$ cũng giải được XOR.</li>
+<li><b>Biểu đồ loss:</b> hàm $J$ không lồi nên có thể có vùng phẳng mà gradient rất nhỏ. Với một số lần khởi tạo khác, $H=2$ có thể kẹt ở đó (thử 4 lần khởi tạo thì 1 lần kẹt ở accuracy 50%). Vì vậy khởi tạo ngẫu nhiên và số neuron ẩn đều quan trọng.</li></ul></div></section>
+
+<section id="s7"><h2>7. Mạng quá lớn thì sao?</h2>
+<p>Giống Decision Tree, mạng có nhiều neuron và nhiều epoch quá sẽ <b>overfitting</b>: loss trên tập train giảm mãi nhưng trên dữ liệu mới thì tăng. Các cách thường dùng:</p>
+<div class="tw"><table>
+<tr><th>Kỹ thuật</th><th>Ý nghĩa đơn giản</th></tr>
+<tr><td>Validation set + early stopping</td><td>Theo dõi loss trên dữ liệu chưa huấn luyện, dừng khi nó bắt đầu tăng</td></tr>
+<tr><td>Regularization (L2, weight decay)</td><td>Thêm $\lambda\sum w^2$ vào $J$ để trọng số không quá lớn</td></tr>
+<tr><td>Dropout</td><td>Mỗi lần huấn luyện tắt ngẫu nhiên một phần neuron</td></tr>
+<tr><td>Giảm kích thước mạng / thêm dữ liệu</td><td>Ít tham số hơn thì khó học vẹt hơn</td></tr>
+</table></div>
+<p>Các siêu tham số (hyperparameters) chính: số lớp, số neuron mỗi lớp, hàm kích hoạt, learning rate $\alpha$, kích thước batch, số epoch.</p></section>
+
+<section id="s8"><h2>8. Tóm tắt 5 dòng</h2>
+<ol>
+<li>Neuron $=$ tổng có trọng số $+$ activation (một neuron sigmoid chính là Logistic Regression). Mạng $=$ nhiều neuron xếp thành lớp.</li>
+<li>Phải có activation phi tuyến, vì nếu không thì nhiều lớp thu về một phép biến đổi tuyến tính.</li>
+<li>Forward pass: tính từ đầu vào ra đến dự đoán $p$, rồi tính loss $L$.</li>
+<li>Backprop $=$ chain rule từ cuối về đầu: gradient của trọng số $=\delta$ của neuron nhận $\times$ giá trị đi vào; $\delta$ lớp trước $=\delta$ lớp sau $\times$ trọng số $\times$ đạo hàm activation.</li>
+<li>Dùng Gradient Descent lặp lại nhiều epoch. Cẩn thận overfitting và vanishing gradient (nên dùng ReLU cho lớp ẩn của mạng sâu).</li></ol></section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script>
+var BLUE='#2a78d6',RED='#e34948',ORG='#ef9f27',GRN='#1d9e75';
+function cssv(n,f){var v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||f;}
+var sg=function(z){return 1/(1+Math.exp(-z));};
+/* Hinh 1 */
+(function(){
+ var th=Math.tanh,rl=function(z){return Math.max(0,z);};
+ function pts(f){var a=[];for(var i=-120;i<=120;i++){a.push({x:i/20,y:f(i/20)});}return a;}
+ var ch=new Chart(document.getElementById('c1'),{type:'scatter',data:{datasets:[
+ {label:'Sigmoid',data:pts(sg),showLine:true,pointRadius:0,borderColor:BLUE,borderWidth:2},
+ {label:'Tanh',data:pts(th),showLine:true,pointRadius:0,borderColor:GRN,borderWidth:2},
+ {label:'ReLU',data:pts(rl),showLine:true,pointRadius:0,borderColor:RED,borderWidth:2},
+ {label:'Sigmoid tại z',data:[{x:.8,y:sg(.8)}],pointRadius:6,backgroundColor:BLUE},
+ {label:'Tanh tại z',data:[{x:.8,y:th(.8)}],pointRadius:6,backgroundColor:GRN},
+ {label:'ReLU tại z',data:[{x:.8,y:.8}],pointRadius:6,backgroundColor:RED}]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom',labels:{filter:function(i){return i.datasetIndex<3;}}}},scales:{x:{min:-6,max:6,title:{display:true,text:'z'}},y:{min:-1.2,max:3,title:{display:true,text:'a = f(z)'}}}}});
+ function up(){var z=+document.getElementById('z').value;document.getElementById('zv').textContent=z.toFixed(2);
+ var s=sg(z),t=th(z);
+ document.getElementById('s').textContent=s.toFixed(3);document.getElementById('sd').textContent=(s*(1-s)).toFixed(3);
+ document.getElementById('t').textContent=t.toFixed(3);document.getElementById('td').textContent=(1-t*t).toFixed(3);
+ document.getElementById('r').textContent=rl(z).toFixed(3);document.getElementById('rd').textContent=z>0?'1':'0';
+ ch.data.datasets[3].data=[{x:z,y:s}];ch.data.datasets[4].data=[{x:z,y:t}];ch.data.datasets[5].data=[{x:z,y:rl(z)}];ch.update('none');}
+ document.getElementById('z').addEventListener('input',up);up();
+})();
+/* Hinh 2 */
+(function(){
+var x=[1,2],y=1,NE=100;
+function init(){return {W:[[0.5,-0.3],[0.2,0.4]],b:[0.1,-0.2],v:[0.6,-0.5],c:0.3};}
+function clone(P){return {W:[P.W[0].slice(),P.W[1].slice()],b:P.b.slice(),v:P.v.slice(),c:P.c};}
+function fwd(P){var a=[];for(var j=0;j<2;j++)a.push(sg(P.W[j][0]*x[0]+P.W[j][1]*x[1]+P.b[j]));var p=sg(P.v[0]*a[0]+P.v[1]*a[1]+P.c);return {a:a,p:p,L:-Math.log(p)};}
+function stepP(P,al){var f=fwd(P),d2=f.p-y,Q=clone(P);
+ for(var j=0;j<2;j++){var d1=d2*P.v[j]*f.a[j]*(1-f.a[j]);Q.v[j]=P.v[j]-al*d2*f.a[j];Q.b[j]=P.b[j]-al*d1;for(var i=0;i<2;i++)Q.W[j][i]=P.W[j][i]-al*d1*x[i];}
+ Q.c=P.c-al*d2;return Q;}
+var S=[];function build(){var al=+document.getElementById('a').value;S=[init()];for(var k=0;k<NE;k++)S.push(stepP(S[k],al));}
+var ch=new Chart(document.getElementById('c2'),{type:'line',data:{labels:[],datasets:[{label:'Loss L theo epoch',data:[],borderColor:RED,pointRadius:0,borderWidth:2},{label:'Epoch đang xem',data:[],showLine:false,pointRadius:7,backgroundColor:ORG,borderColor:ORG}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'Epoch'}},y:{min:0,title:{display:true,text:'L'}}}}});
+function col(w){return w>=0?BLUE:RED;}
+function wd(w){return 1+Math.min(5,Math.abs(w)*5);}
+function f2(v){return (v<0?'−':'')+Math.abs(v).toFixed(3);}
+var IN=[[70,100],[70,230]],HD=[[330,100],[330,230]],OUT=[590,165];
+function draw(){
+ var k=+document.getElementById('e').value,P=S[k],P0=S[0],f=fwd(P);
+ document.getElementById('ev').textContent=k;document.getElementById('av').textContent=(+document.getElementById('a').value).toFixed(1);
+ document.getElementById('p').textContent=f.p.toFixed(3);document.getElementById('L').textContent=f.L.toFixed(3);
+ var s='';
+ function edge(a,b,w,t,dy){var mx=a[0]+(b[0]-a[0])*t,my=a[1]+(b[1]-a[1])*t+(dy||0);
+  s+='<line x1="'+a[0]+'" y1="'+a[1]+'" x2="'+b[0]+'" y2="'+b[1]+'" stroke="'+col(w)+'" stroke-width="'+wd(w)+'" stroke-opacity="0.75"/>';
+  s+='<text class="lbl" x="'+mx+'" y="'+my+'" text-anchor="middle" font-size="13" font-weight="600" fill="'+col(w)+'">'+f2(w)+'</text>';}
+ edge(IN[0],HD[0],P.W[0][0],0.3,-6);edge(IN[0],HD[1],P.W[1][0],0.3,-2);
+ edge(IN[1],HD[0],P.W[0][1],0.3,4);edge(IN[1],HD[1],P.W[1][1],0.3,14);
+ edge(HD[0],OUT,P.v[0],0.5,-6);edge(HD[1],OUT,P.v[1],0.5,14);
+ function node(c,txt,lab,fill){s+='<circle cx="'+c[0]+'" cy="'+c[1]+'" r="27" fill="'+fill+'" stroke="#888"/><text x="'+c[0]+'" y="'+(c[1]+5)+'" text-anchor="middle" font-size="14" font-weight="600" fill="#222">'+txt+'</text><text x="'+c[0]+'" y="'+(c[1]-36)+'" text-anchor="middle" font-size="12" fill="'+cssv('--muted','#666')+'">'+lab+'</text>';}
+ node(IN[0],x[0],'x₁','#e6e4dc');node(IN[1],x[1],'x₂','#e6e4dc');
+ node(HD[0],f.a[0].toFixed(3),'a₁ (ẩn 1)','#cfe3f7');node(HD[1],f.a[1].toFixed(3),'a₂ (ẩn 2)','#cfe3f7');node(OUT,f.p.toFixed(3),'p (đầu ra)','#cfeadf');
+ var tc=cssv('--muted','#666');
+ s+='<text x="330" y="146" text-anchor="middle" font-size="12" fill="'+tc+'">b₁ = '+f2(P.b[0])+'</text><text x="330" y="276" text-anchor="middle" font-size="12" fill="'+tc+'">b₂ = '+f2(P.b[1])+'</text><text x="590" y="211" text-anchor="middle" font-size="12" fill="'+tc+'">c = '+f2(P.c)+'</text>';
+ s+='<text x="70" y="300" text-anchor="middle" font-size="12" fill="'+tc+'">input</text><text x="330" y="310" text-anchor="middle" font-size="12" fill="'+tc+'">hidden layer</text><text x="590" y="260" text-anchor="middle" font-size="12" fill="'+tc+'">output</text>';
+ document.getElementById('svg').innerHTML=s;
+ var names=['w₁₁','w₁₂','b₁','w₂₁','w₂₂','b₂','v₁','v₂','c'];
+ function arr(Q){return [Q.W[0][0],Q.W[0][1],Q.b[0],Q.W[1][0],Q.W[1][1],Q.b[1],Q.v[0],Q.v[1],Q.c];}
+ var a0=arr(P0),a1=arr(P),h='<tr><th>Tham số</th><th>Epoch 0</th><th>Epoch '+k+'</th><th>Thay đổi</th></tr>';
+ for(var i=0;i<9;i++){var d=a1[i]-a0[i];h+='<tr><td>'+names[i]+'</td><td>'+f2(a0[i])+'</td><td>'+f2(a1[i])+'</td><td style="color:'+(d>=0?BLUE:RED)+'">'+(d>=0?'+':'−')+Math.abs(d).toFixed(3)+'</td></tr>';}
+ document.getElementById('tb').innerHTML=h;
+ ch.data.datasets[1].data=[{x:k,y:f.L}];ch.update('none');
+}
+function recompute(){build();ch.data.labels=S.map(function(_,i){return i;});ch.data.datasets[0].data=S.map(function(Q){return fwd(Q).L;});ch.data.datasets[1].data=[];draw();}
+document.getElementById('e').addEventListener('input',draw);
+document.getElementById('a').addEventListener('input',recompute);
+var timer=null;
+document.getElementById('play').onclick=function(){var b=this;if(timer){clearInterval(timer);timer=null;b.textContent='▶ Chạy tự động';return;}
+ var e=document.getElementById('e');if(+e.value>=NE)e.value=0;b.textContent='⏸ Dừng';
+ timer=setInterval(function(){if(+e.value>=NE){clearInterval(timer);timer=null;b.textContent='▶ Chạy tự động';return;}e.value=+e.value+1;draw();},120);};
+recompute();
+})();
+/* Hinh 3 */
+(function(){
+var seed=7;function rnd(){seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296;}
+function nrm(){return (rnd()+rnd()+rnd()-1.5)*1.4;}
+var data=[];[[0,0,0],[0,1,1],[1,0,1],[1,1,0]].forEach(function(c){for(var k=0;k<5;k++)data.push({x:[c[0]+(rnd()-.5)*.36,c[1]+(rnd()-.5)*.36],y:c[2]});});
+function Net(H,s){seed=s;this.H=H;this.W=[];this.b=[];this.v=[];for(var j=0;j<H;j++){this.W.push([nrm(),nrm()]);this.b.push(0);this.v.push(nrm());}this.c=0;}
+Net.prototype.fwd=function(x){var a=[],z=this.c;for(var j=0;j<this.H;j++){var t=Math.tanh(this.W[j][0]*x[0]+this.W[j][1]*x[1]+this.b[j]);a.push(t);z+=this.v[j]*t;}return {a:a,p:sg(z)};};
+Net.prototype.step=function(lr){var H=this.H,n=data.length,gW=[],gb=[],gv=[],gc=0;for(var j=0;j<H;j++){gW.push([0,0]);gb.push(0);gv.push(0);}
+ data.forEach(function(d){var f=this.fwd(d.x),d2=f.p-d.y;gc+=d2;for(var j=0;j<H;j++){gv[j]+=d2*f.a[j];var d1=d2*this.v[j]*(1-f.a[j]*f.a[j]);gW[j][0]+=d1*d.x[0];gW[j][1]+=d1*d.x[1];gb[j]+=d1;}},this);
+ this.c-=lr*gc/n;for(var j=0;j<H;j++){this.v[j]-=lr*gv[j]/n;this.b[j]-=lr*gb[j]/n;this.W[j][0]-=lr*gW[j][0]/n;this.W[j][1]-=lr*gW[j][1]/n;}};
+Net.prototype.ev=function(){var L=0,c=0;data.forEach(function(d){var p=this.fwd(d.x).p;L+=-(d.y*Math.log(p+1e-12)+(1-d.y)*Math.log(1-p+1e-12));if((p>.5?1:0)===d.y)c++;},this);return {L:L/data.length,acc:c/data.length};};
+var net,ep,hist,cv=document.getElementById('cv3'),ctx=cv.getContext('2d');
+var ch=new Chart(document.getElementById('c3'),{type:'line',data:{labels:[],datasets:[{label:'Loss J theo epoch',data:[],borderColor:RED,pointRadius:0,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'Epoch'}},y:{min:0,title:{display:true,text:'J'}}}}});
+function reset(){net=new Net(+document.getElementById('h').value,11);ep=0;hist=[{e:0,L:net.ev().L}];draw();}
+function train(k){for(var i=0;i<k;i++){net.step(1.0);ep++;if(ep%20===0)hist.push({e:ep,L:net.ev().L});}draw();}
+function draw(){
+ var e=net.ev();document.getElementById('hv').textContent=net.H;document.getElementById('ep').textContent=ep;
+ document.getElementById('Lx').textContent=e.L.toFixed(3);document.getElementById('ac').textContent=(e.acc*100).toFixed(0)+'%';
+ var S=cv.width,N=60,cs=S/N;
+ for(var i=0;i<N;i++)for(var j=0;j<N;j++){var x1=-0.5+2*(i+.5)/N,x2=-0.5+2*(1-(j+.5)/N);var p=net.fwd([x1,x2]).p;
+  ctx.fillStyle=p>.5?'rgba(42,120,214,'+(0.12+0.4*(p-.5)*2)+')':'rgba(227,73,72,'+(0.12+0.4*(.5-p)*2)+')';ctx.fillRect(i*cs,j*cs,cs+1,cs+1);}
+ function X(a){return (a+0.5)/2*S;}function Y(b){return S-(b+0.5)/2*S;}
+ data.forEach(function(d){var cx=X(d.x[0]),cy=Y(d.x[1]);if(d.y){ctx.fillStyle=BLUE;ctx.beginPath();ctx.arc(cx,cy,6,0,6.283);ctx.fill();}else{ctx.fillStyle=RED;ctx.beginPath();ctx.moveTo(cx,cy-7);ctx.lineTo(cx+6,cy);ctx.lineTo(cx,cy+7);ctx.lineTo(cx-6,cy);ctx.closePath();ctx.fill();}ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.stroke();});
+ ch.data.labels=hist.map(function(h){return h.e;});ch.data.datasets[0].data=hist.map(function(h){return h.L;});ch.update('none');
+}
+document.getElementById('t200').onclick=function(){train(200);};
+document.getElementById('t1500').onclick=function(){train(1500);};
+document.getElementById('rs').onclick=reset;
+document.getElementById('h').addEventListener('input',reset);
+reset();
+})();
+</script>
+</body>
+</html>

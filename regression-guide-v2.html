@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear Regression, Gradient Descent và Logistic Regression: suy ra từng công thức</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Linear Regression, Gradient Descent và Logistic Regression</h1>
+    <p>Mỗi công thức đều được suy ra từ công thức trước nó, kèm ví dụ số, hình tương tác và thuật ngữ tiếng Anh.</p>
+  </div>
+</header>
+<nav>
+  <div class="wrap">
+    <a href="#buoc0">Bước 0</a>
+    <a href="#linear">1. Linear Regression</a>
+    <a href="#gd">2. Gradient Descent</a>
+    <a href="#logistic">3. Logistic Regression</a>
+    <a href="#banpd">Bản đồ công thức</a>
+    <a href="#tomtat">Tóm tắt</a>
+    <a href="#thuatngu">Thuật ngữ</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="buoc0">
+  <h2>Bước 0: Machine learning đang làm gì?</h2>
+  <p>Bạn có tập dữ liệu huấn luyện (training dataset), trong đó mỗi mẫu (sample / example) gồm đầu vào hay đặc trưng (input / feature) $x$ và đáp án thật hay nhãn (target / label) $y$. Ví dụ: $x$ là diện tích nhà, $y$ là giá nhà. Ta học (train / fit) một mô hình (model) để khi gặp $x$ mới, nó đưa ra dự đoán (prediction) $\hat y$.</p>
+  <div class="tw"><table>
+    <tr><th>Loại bài toán</th><th>Câu hỏi</th><th>Ví dụ</th><th>Mô hình</th></tr>
+    <tr><td>Hồi quy (Regression)</td><td>Bao nhiêu? (giá trị liên tục)</td><td>Nhà này giá bao nhiêu?</td><td>Linear Regression</td></tr>
+    <tr><td>Phân loại (Classification)</td><td>Có hay không? (lớp rời rạc)</td><td>Sinh viên đậu hay rớt?</td><td>Logistic Regression</td></tr>
+  </table></div>
+  <div class="note">Gradient Descent không phải một mô hình. Nó là thuật toán tối ưu hóa (optimization algorithm) giúp tìm tham số tốt nhất. Phần 1 sẽ cho thấy vì sao ta cần nó, và phần 2 suy ra nó từ đầu.</div>
+  <p>Chuỗi suy luận của cả bài, để bạn nắm bức tranh lớn trước:</p>
+  <div class="tw"><table>
+    <tr><th>Bước</th><th>Câu hỏi</th><th>Công thức đi ra</th></tr>
+    <tr><td>1</td><td>Mô hình là gì, sai bao nhiêu?</td><td>$\hat y=wx+b$ và cost $J$ (MSE)</td></tr>
+    <tr><td>2</td><td>Tìm $w,b$ làm $J$ nhỏ nhất bằng cách nào?</td><td>Cho đạo hàm bằng 0 (closed-form), nhưng không phải lúc nào cũng làm được</td></tr>
+    <tr><td>3</td><td>Khi không giải thẳng được thì sao?</td><td>Gradient Descent: $\theta\leftarrow\theta-\alpha\nabla J$</td></tr>
+    <tr><td>4</td><td>Gradient của $J$ là gì?</td><td>Quy tắc chuỗi (chain rule)</td></tr>
+    <tr><td>5</td><td>Bài toán Có/Không thì sao?</td><td>Sigmoid, log loss (từ Maximum Likelihood), gradient gọn như Linear Regression</td></tr>
+  </table></div>
+</section>
+
+<section id="linear">
+  <h2>Phần 1: Linear Regression (Hồi quy tuyến tính)</h2>
+
+  <h3>1.1. Mô hình là một đường thẳng</h3>
+  $$\hat y = w\cdot x + b$$
+  <p>$w$ là trọng số (weight), cũng là hệ số góc (slope): $x$ tăng 1 đơn vị thì dự đoán tăng $w$. $b$ là hệ số chặn (bias / intercept): mức "nền" khi $x=0$. Hai số này gọi là tham số (parameters), và học nghĩa là tìm cặp $(w,b)$ tốt nhất. Ví dụ $w=2$, $b=1$, $x=5$ thì $\hat y=11$.</p>
+
+  <h3>1.2. Đo sai số: Residual, Loss và Cost</h3>
+  <p>Với mỗi điểm dữ liệu $i$, sai số (residual / error) là $e_i=\hat y_i-y_i$. Ta cần biến $n$ sai số này thành một con số duy nhất để so sánh các đường thẳng:</p>
+  <div class="derive">
+    <span class="tag">SUY RA</span>
+    <p><span class="step">Bước 1.</span> Không cộng thẳng $e_i$ vì sai âm và sai dương triệt tiêu nhau (ví dụ $+3$ và $-3$ cộng lại bằng 0, tưởng là hoàn hảo).</p>
+    <p><span class="step">Bước 2.</span> Bình phương mỗi sai số: $L_i=e_i^2=(\hat y_i-y_i)^2$. Đây là hàm mất mát (loss function) của một mẫu. Bình phương còn phạt nặng sai lớn (sai 3 bị phạt 9, sai 1 chỉ bị phạt 1) và cho hàm trơn, dễ lấy đạo hàm.</p>
+    <p><span class="step">Bước 3.</span> Lấy trung bình trên cả $n$ mẫu, ta được hàm chi phí (cost function):</p>
+    $$J(w,b)=\frac{1}{n}\sum_{i=1}^{n}(\hat y_i-y_i)^2=\frac{1}{n}\sum_{i=1}^{n}(wx_i+b-y_i)^2\quad\text{(MSE: Mean Squared Error)}$$
+  </div>
+  <div class="note">Về cách gọi: loss là sai số của một mẫu, cost là trung bình trên cả tập. Nhiều tài liệu dùng lẫn hai từ và gọi chung là loss, nên hãy hiểu theo ngữ cảnh.</div>
+  <p>Cost $J$ càng nhỏ thì mô hình càng khớp dữ liệu, nên bài toán học trở thành: tìm $(w,b)$ để minimize $J$.</p>
+
+  <h3>1.3. Hình 1: tự tay chỉnh đường thẳng</h3>
+  <p>Dữ liệu: diện tích nhà $x$ (đơn vị 10 m²) và giá nhà $y$ (đơn vị 100 triệu). Các đoạn đỏ đứt nét là residual, và cost (MSE) là trung bình bình phương độ dài của chúng.</p>
+  <div class="widget">
+    <h4>Hình 1: Linear Regression tương tác</h4>
+    <div class="ctrl">
+      <div><label>Weight / slope w: <b id="w1v">1.0</b></label><input type="range" id="w1" min="0" max="4" step="0.1" value="1"></div>
+      <div><label>Bias / intercept b: <b id="b1v">0.0</b></label><input type="range" id="b1" min="-4" max="6" step="0.1" value="0"></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="l">Cost J (MSE) hiện tại</div><div class="v" id="mse1">0</div></div>
+      <div class="metric"><div class="l">Minimum cost (OLS)</div><div class="v" id="msemin1">0</div></div>
+    </div>
+    <div class="btns"><button id="fit1">Jump to optimum</button></div>
+    <div class="legend">
+      <span><i style="background:#2a78d6"></i>Data points</span>
+      <span><i style="background:#eb6834"></i>Prediction line</span>
+      <span><i style="background:#e34948"></i>Residual</span>
+    </div>
+    <div class="chart"><canvas id="c1" role="img" aria-label="Đường hồi quy tuyến tính, các điểm dữ liệu và residual"></canvas></div>
+  </div>
+  <p>Nghiệm tối ưu của dữ liệu này là $w\approx1.95$, $b\approx1.2$. Nút "Jump to optimum" làm tròn về 1.9 và 1.2.</p>
+
+  <h3>1.4. Cách 1 để tìm $(w,b)$: cho đạo hàm bằng 0</h3>
+  <p>Ở đáy của một cái bát, mặt đất phẳng, tức độ dốc bằng 0. Vậy điểm làm $J$ nhỏ nhất phải thỏa mãn $\frac{\partial J}{\partial w}=0$ và $\frac{\partial J}{\partial b}=0$. Với MSE, đây là hai phương trình bậc nhất, giải được ngay. (Đạo hàm của $J$ sẽ được suy ra chi tiết ở mục 2.3; ở đây ta dùng kết quả trước.)</p>
+  <div class="derive">
+    <span class="tag">SUY RA (1 đặc trưng)</span>
+    <p>Từ $\frac{\partial J}{\partial b}=\frac{2}{n}\sum(wx_i+b-y_i)=0$, chia cho $n$ ta được $w\bar x+b-\bar y=0$, suy ra:</p>
+    $$b=\bar y-w\bar x$$
+    <p>Thế $b$ vào $\frac{\partial J}{\partial w}=\frac{2}{n}\sum(wx_i+b-y_i)x_i=0$, rút gọn (dùng $\sum(x_i-\bar x)=0$) ta được:</p>
+    $$w=\frac{\sum(x_i-\bar x)(y_i-\bar y)}{\sum(x_i-\bar x)^2}$$
+  </div>
+  <div class="derive">
+    <span class="tag">SUY RA (nhiều đặc trưng, dạng ma trận)</span>
+    <p>Gom mọi đặc trưng và cột số 1 (cho $b$) vào ma trận $X$, tham số vào vector $\mathbf w$. Khi đó $J=\frac1n\lVert X\mathbf w-\mathbf y\rVert^2$ và gradient là $\nabla J=\frac{2}{n}X^\top(X\mathbf w-\mathbf y)$. Cho $\nabla J=0$:</p>
+    $$X^\top X\,\mathbf w=X^\top\mathbf y\;\Longrightarrow\;\mathbf w=(X^\top X)^{-1}X^\top\mathbf y\quad\text{(Normal Equation)}$$
+  </div>
+  <p>Đây là nghiệm dạng đóng (closed-form solution), còn phương pháp này gọi là OLS (Ordinary Least Squares). Giải một lần là xong, không cần lặp.</p>
+
+  <h3>1.5. Vậy vì sao vẫn cần Gradient Descent?</h3>
+  <p>Với Linear Regression nhỏ (vài chục đặc trưng), Normal Equation vẫn là lựa chọn tốt. Nhưng có bốn lý do khiến ta cần một cách khác:</p>
+  <div class="tw"><table>
+    <tr><th>Vấn đề</th><th>Giải thích</th></tr>
+    <tr><td>Chi phí tính toán</td><td>Với $d$ đặc trưng, tạo $X^\top X$ tốn khoảng $O(nd^2)$ và nghịch đảo ma trận $d\times d$ tốn khoảng $O(d^3)$. Với $d$ cỡ hàng chục nghìn trở lên thì quá chậm hoặc bất khả thi. Một vòng Gradient Descent chỉ tốn khoảng $O(nd)$.</td></tr>
+    <tr><td>Ma trận không khả nghịch</td><td>$X^\top X$ suy biến khi các đặc trưng phụ thuộc tuyến tính (collinearity) hoặc khi $n&lt;d$; lúc đó $(X^\top X)^{-1}$ không tồn tại hoặc rất bất ổn.</td></tr>
+    <tr><td>Dữ liệu quá lớn</td><td>Normal Equation cần toàn bộ dữ liệu cùng lúc; Gradient Descent (mini-batch) xử lý từng phần nhỏ, kể cả khi không nạp vừa RAM.</td></tr>
+    <tr><td>Quan trọng nhất: không phải bài toán nào cũng giải được</td><td>Với Logistic Regression hay mạng neural, cho $\nabla J=0$ ra phương trình phi tuyến (có $\sigma$, $\ln$ bên trong) mà ta không giải đại số được. Phần 3 sẽ cho thấy rõ điều này. Gradient Descent là công cụ chung cho mọi trường hợp đó, và Linear Regression là nơi ta tập dượt nó.</td></tr>
+  </table></div>
+  <div class="note">Ý tưởng chuyển hướng: thay vì "giải ra đáy ngay", ta đứng ở một điểm bất kỳ và liên tục bước xuống dốc. Câu hỏi tiếp theo là: bước theo hướng nào, và bước bao xa? Phần 2 trả lời bằng toán.</div>
+</section>
+
+<section id="gd">
+  <h2>Phần 2: Gradient Descent</h2>
+
+  <h3>2.1. Hình dung bằng câu chuyện</h3>
+  <p>Bạn bị bịt mắt, đứng trên sườn đồi và muốn xuống đáy thung lũng (điểm cực tiểu, minimum, nơi cost nhỏ nhất). Bạn chỉ cảm nhận được độ dốc dưới chân, nên bước một bước nhỏ về phía đi xuống rồi lặp lại. Mỗi lần lặp là một iteration (hoặc step). Khi cost không giảm thêm nữa, ta nói thuật toán đã hội tụ (convergence).</p>
+
+  <h3>2.2. Suy ra công thức cập nhật (update rule)</h3>
+  <p>Ta gom mọi tham số vào $\theta$ (ở đây $\theta=(w,b)$). Độ dốc theo mọi tham số gộp lại là gradient $\nabla J(\theta)$, vector các đạo hàm riêng (partial derivatives). Câu hỏi: từ $\theta$ hiện tại, nên dịch đi một đoạn $\Delta$ như thế nào để $J$ giảm nhiều nhất?</p>
+  <div class="derive">
+    <span class="tag">SUY RA</span>
+    <p><span class="step">Bước 1: xấp xỉ $J$ gần $\theta$ bằng khai triển Taylor bậc 1.</span> Với bước nhỏ $\Delta$:</p>
+    $$J(\theta+\Delta)\approx J(\theta)+\nabla J(\theta)^\top\Delta$$
+    <p>(Ở 1 chiều: $J(w+\Delta)\approx J(w)+J'(w)\,\Delta$, tức "đổi $\Delta$ thì $J$ đổi khoảng độ dốc nhân $\Delta$".)</p>
+    <p><span class="step">Bước 2: muốn $J$ giảm nhiều nhất, cần $\nabla J^\top\Delta$ âm nhất.</span> Với độ dài bước $\lVert\Delta\rVert$ cố định, bất đẳng thức Cauchy–Schwarz cho:</p>
+    $$\nabla J^\top\Delta\;\ge\;-\lVert\nabla J\rVert\,\lVert\Delta\rVert$$
+    <p>Dấu bằng xảy ra khi $\Delta$ ngược hướng với $\nabla J$. Vậy hướng giảm nhanh nhất là hướng $-\nabla J$ (đó là lý do có chữ "descent").</p>
+    <p><span class="step">Bước 3: chọn độ dài bước bằng một hằng số $\alpha&gt;0$.</span> Đặt $\Delta=-\alpha\,\nabla J(\theta)$, ta được quy tắc cập nhật:</p>
+    $$\boxed{\;\theta\leftarrow\theta-\alpha\,\nabla J(\theta)\;}\qquad\text{tức}\qquad w\leftarrow w-\alpha\frac{\partial J}{\partial w},\quad b\leftarrow b-\alpha\frac{\partial J}{\partial b}$$
+    <p><span class="step">Kiểm tra:</span> thế vào Bước 1, $J_{\text{mới}}\approx J-\alpha\lVert\nabla J\rVert^2\le J$, nên cost giảm (với $\alpha$ đủ nhỏ). $\alpha$ là tốc độ học (learning rate), một siêu tham số (hyperparameter) do người huấn luyện chọn. Cũng vì Taylor chỉ đúng khi bước nhỏ, $\alpha$ quá lớn sẽ làm xấp xỉ sai và cost có thể tăng.</p>
+  </div>
+
+  <h3>2.3. Suy ra gradient của MSE (quy tắc chuỗi)</h3>
+  <p>Update rule cần $\frac{\partial J}{\partial w}$ và $\frac{\partial J}{\partial b}$. $J$ được xây từ nhiều lớp hàm lồng nhau, nên ta dùng quy tắc chuỗi (chain rule): đạo hàm của hàm lồng bằng tích các đạo hàm từng lớp.</p>
+  <div class="derive">
+    <span class="tag">SUY RA</span>
+    <p>Với một mẫu, chuỗi tính toán là: $w,b\;\to\;\hat y_i=wx_i+b\;\to\;e_i=\hat y_i-y_i\;\to\;L_i=e_i^2$. Đạo hàm từng lớp:</p>
+    <div class="tw"><table>
+      <tr><th>Lớp</th><th>Đạo hàm</th></tr>
+      <tr><td>$L_i=e_i^2$</td><td>$\dfrac{\partial L_i}{\partial e_i}=2e_i$</td></tr>
+      <tr><td>$e_i=\hat y_i-y_i$</td><td>$\dfrac{\partial e_i}{\partial \hat y_i}=1$</td></tr>
+      <tr><td>$\hat y_i=wx_i+b$</td><td>$\dfrac{\partial \hat y_i}{\partial w}=x_i,\quad\dfrac{\partial \hat y_i}{\partial b}=1$</td></tr>
+    </table></div>
+    <p>Nhân các đạo hàm theo chuỗi:</p>
+    $$\frac{\partial L_i}{\partial w}=2e_i\cdot1\cdot x_i=2e_ix_i,\qquad \frac{\partial L_i}{\partial b}=2e_i\cdot1\cdot1=2e_i$$
+    <p>$J$ là trung bình của các $L_i$, và đạo hàm của tổng bằng tổng các đạo hàm, nên:</p>
+    $$\frac{\partial J}{\partial w}=\frac{2}{n}\sum_{i=1}^n(\hat y_i-y_i)\,x_i,\qquad \frac{\partial J}{\partial b}=\frac{2}{n}\sum_{i=1}^n(\hat y_i-y_i)$$
+    <p>Ghép với update rule của mục 2.2, ta có thuật toán hoàn chỉnh cho Linear Regression:</p>
+    $$w\leftarrow w-\alpha\frac{2}{n}\sum(\hat y_i-y_i)x_i,\qquad b\leftarrow b-\alpha\frac{2}{n}\sum(\hat y_i-y_i)$$
+  </div>
+  <p>Ý nghĩa dễ nhớ: nếu mô hình dự đoán thấp hơn thực tế ($\hat y-y&lt;0$) thì gradient âm, nên $w$ tăng. Nếu dự đoán cao hơn thì $w$ giảm. Số $x_i$ nhân vào nghĩa là điểm có $x$ lớn ảnh hưởng đến $w$ nhiều hơn. (Hệ số 2 thường được gộp vào $\alpha$, hoặc người ta định nghĩa $J$ với $\frac{1}{2n}$ để triệt tiêu nó.)</p>
+
+  <h3>2.4. Tính tay tiếp ví dụ 3 điểm $(1,3),(2,5),(3,7)$</h3>
+  <p>Giữ $b=1$, bắt đầu từ $w=1$, chọn $\alpha=0.05$ (đường thẳng tối ưu là $w=2$). Áp dụng đúng công thức của 2.3:</p>
+  <div class="tw"><table>
+    <tr><th>Iteration</th><th>$w$</th><th>Residual ($\hat y-y$)</th><th>$\sum e_i x_i$</th><th>Gradient $\frac2n\sum e_ix_i$</th><th>$w$ mới $=w-\alpha\cdot$gradient</th></tr>
+    <tr><td>1</td><td>1.000</td><td>−1, −2, −3</td><td>−14</td><td>$\tfrac23(-14)=-9.33$</td><td>$1+0.05\cdot9.33=1.467$</td></tr>
+    <tr><td>2</td><td>1.467</td><td>−0.53, −1.07, −1.60</td><td>−7.47</td><td>−4.98</td><td>1.716</td></tr>
+    <tr><td>3</td><td>1.716</td><td>−0.28, −0.57, −0.85</td><td>−3.98</td><td>−2.65</td><td>1.849</td></tr>
+  </table></div>
+  <p>$w$ tiến dần về 2. Gradient nhỏ dần nên các bước cũng ngắn dần, vì bước $=\alpha\times$ gradient.</p>
+
+  <h3>2.5. Hình 2: thử đổi learning rate</h3>
+  <p>Để nhìn rõ vai trò của $\alpha$, ta dùng "ngọn đồi" đơn giản $J(w)=(w-3)^2+1$ (đáy ở $w=3$), xuất phát từ $w=-1$. Kéo $\alpha$ rồi bấm "Step" hoặc "Run 10 steps".</p>
+  <div class="widget">
+    <h4>Hình 2: Gradient Descent và learning rate</h4>
+    <div class="ctrl" style="grid-template-columns:1fr">
+      <div><label>Learning rate α: <b id="a2v">0.10</b></label><input type="range" id="a2" min="0.01" max="1.1" step="0.01" value="0.1"></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="l">Iteration t</div><div class="v" id="t2">0</div></div>
+      <div class="metric"><div class="l">Weight w</div><div class="v" id="w2v">-1.00</div></div>
+      <div class="metric"><div class="l">Cost J(w)</div><div class="v" id="j2v">17.00</div></div>
+      <div class="metric"><div class="l">Gradient</div><div class="v" id="g2v">-8.00</div></div>
+    </div>
+    <div class="btns">
+      <button id="step2">Step</button>
+      <button id="run2">Run 10 steps</button>
+      <button id="reset2">Reset</button>
+    </div>
+    <div class="chart" style="height:300px"><canvas id="c2" role="img" aria-label="Parabol cost J(w) và các bước Gradient Descent"></canvas></div>
+  </div>
+  <div class="derive">
+    <span class="tag">SUY RA: vì sao $\alpha$ lớn hơn 1 thì phân kỳ?</span>
+    <p>Với $J(w)=(w-3)^2+1$ ta có $J'(w)=2(w-3)$. Thế vào update rule rồi trừ 3 hai vế:</p>
+    $$w_{t+1}-3=w_t-3-\alpha\cdot2(w_t-3)=(1-2\alpha)\,(w_t-3)$$
+    <p>Mỗi bước, khoảng cách tới đáy được nhân với $(1-2\alpha)$. Nó thu nhỏ dần khi $|1-2\alpha|&lt;1$, tức $0&lt;\alpha&lt;1$.</p>
+  </div>
+  <div class="tw"><table>
+    <tr><th>$\alpha$</th><th>Hệ số $1-2\alpha$</th><th>Hiện tượng</th><th>Thuật ngữ</th></tr>
+    <tr><td>Rất nhỏ (0.01)</td><td>0.98</td><td>Đúng hướng nhưng quá chậm</td><td>Slow convergence</td></tr>
+    <tr><td>0.1 đến 0.4</td><td>0.8 đến 0.2</td><td>Xuống đáy gọn gàng</td><td>Converges</td></tr>
+    <tr><td>0.5</td><td>0</td><td>Tới đáy ngay trong 1 bước</td><td>Đặc biệt của hàm này</td></tr>
+    <tr><td>1.0</td><td>−1</td><td>Nhảy qua lại hai bên đáy</td><td>Oscillation</td></tr>
+    <tr><td>Trên 1.0</td><td>nhỏ hơn −1</td><td>Mỗi bước văng xa hơn, cost tăng dần</td><td>Divergence, overshoot</td></tr>
+  </table></div>
+  <p>Tổng quát, với hàm có độ cong (đạo hàm bậc hai) bằng $c$, hệ số trở thành $(1-\alpha c)$, nên $\alpha$ phải nhỏ hơn khoảng $2/c$. Với MSE của Linear Regression, độ cong tỉ lệ với $\operatorname{mean}(x^2)$: đặc trưng càng lớn thì $\alpha$ cho phép càng nhỏ. Đó là lý do chuẩn hóa đặc trưng (feature scaling / standardization, ví dụ z-score) giúp hội tụ nhanh và ổn định hơn.</p>
+  <div class="note">MSE của Linear Regression là hàm lồi (convex): hình "cái bát" chỉ có một đáy. Vì vậy Gradient Descent với $\alpha$ phù hợp luôn đi tới cực tiểu toàn cục (global minimum), không bị kẹt ở cực tiểu địa phương (local minimum).</div>
+
+  <h3>2.6. Ba biến thể và mẹo thực tế</h3>
+  <div class="tw"><table>
+    <tr><th>Biến thể</th><th>Số mẫu mỗi lần cập nhật</th><th>Đặc điểm</th></tr>
+    <tr><td>Batch Gradient Descent</td><td>Toàn bộ $n$ (đúng như công thức ở 2.3)</td><td>Ổn định, chậm với dữ liệu lớn</td></tr>
+    <tr><td>Stochastic Gradient Descent (SGD)</td><td>1</td><td>Nhanh, nhiễu</td></tr>
+    <tr><td>Mini-batch Gradient Descent</td><td>Khoảng 32 đến 256</td><td>Cân bằng, phổ biến nhất</td></tr>
+  </table></div>
+  <p>Hai biến thể sau dùng một phần nhỏ dữ liệu để ước lượng gradient, thay vì tổng trên cả $n$ mẫu. Một lượt đi qua toàn bộ dữ liệu huấn luyện gọi là một epoch. Để theo dõi, hãy vẽ đường cong học (learning curve): cost theo số iteration. Nó phải đi xuống đều, và nếu tăng hoặc nhảy loạn thì hãy giảm $\alpha$.</p>
+</section>
+
+<section id="logistic">
+  <h2>Phần 3: Logistic Regression (Hồi quy logistic)</h2>
+
+  <h3>3.1. Vì sao đường thẳng không đủ cho bài toán Có/Không?</h3>
+  <p>Đây là bài toán phân loại nhị phân (binary classification): nhãn $y$ là 1 (lớp dương, positive class, ví dụ đậu) hoặc 0 (lớp âm, negative class, ví dụ rớt). Nếu dùng $\hat y=wx+b$ thì đầu ra có thể là 1.7 hoặc −0.4, vô nghĩa. Ta muốn đầu ra là xác suất (probability) $p=P(y=1\mid x)$ nằm trong khoảng từ 0 đến 1.</p>
+
+  <h3>3.2. Suy ra hàm sigmoid</h3>
+  <p>Ta vẫn muốn giữ phần tuyến tính $z=wx+b$ (gọi là logit) vì nó đơn giản. Vấn đề là $z$ nằm trong $(-\infty,+\infty)$ còn $p$ nằm trong $(0,1)$. Cần một cầu nối.</p>
+  <div class="derive">
+    <span class="tag">SUY RA</span>
+    <p><span class="step">Bước 1: đổi xác suất thành tỉ lệ cược (odds).</span> $\text{odds}=\dfrac{p}{1-p}$ chạy trong $(0,+\infty)$. Ví dụ $p=0.8$ thì odds $=4$ ("đậu gấp 4 lần rớt").</p>
+    <p><span class="step">Bước 2: lấy logarit để phủ cả khoảng $(-\infty,+\infty)$.</span> $\ln\dfrac{p}{1-p}$ gọi là log-odds. Giả thiết của Logistic Regression: log-odds là hàm tuyến tính của $x$:</p>
+    $$\ln\frac{p}{1-p}=z=wx+b$$
+    <p><span class="step">Bước 3: giải ngược ra $p$.</span> Lấy mũ hai vế: $\dfrac{p}{1-p}=e^{z}$. Suy ra $p=e^z(1-p)$, tức $p(1+e^z)=e^z$, nên:</p>
+    $$p=\frac{e^z}{1+e^z}=\frac{1}{1+e^{-z}}=\sigma(z)$$
+  </div>
+  <p>Đó chính là hàm sigmoid (còn gọi là logistic function). Tên "logit" cũng xuất phát từ đây: $z$ là log-odds.</p>
+  <div class="tw"><table>
+    <tr><th>$z$ (logit)</th><th>−4</th><th>−2</th><th>0</th><th>2</th><th>4</th></tr>
+    <tr><td>$\sigma(z)$</td><td>0.018</td><td>0.119</td><td>0.5</td><td>0.881</td><td>0.982</td></tr>
+  </table></div>
+
+  <h3>3.3. Suy ra ranh giới quyết định (Decision boundary)</h3>
+  <div class="derive">
+    <span class="tag">SUY RA</span>
+    <p>Quy tắc: nếu $p\ge0.5$ (ngưỡng, threshold, thường chọn 0.5) thì dự đoán lớp 1. Từ $p=\dfrac{1}{1+e^{-z}}$: $p\ge0.5\iff 1+e^{-z}\le2\iff e^{-z}\le1\iff z\ge0$. Vậy điểm đổi quyết định là $wx+b=0$, tức:</p>
+    $$x=-\frac{b}{w}\quad\text{(decision boundary)}$$
+  </div>
+  <p>Ví dụ $w=1$, $b=-3$ thì ranh giới là $x=3$:</p>
+  <div class="tw"><table>
+    <tr><th>Giờ học $x$</th><th>$z=x-3$</th><th>$p=\sigma(z)$</th><th>Dự đoán (prediction)</th></tr>
+    <tr><td>2</td><td>−1</td><td>0.27</td><td>Rớt (class 0)</td></tr>
+    <tr><td>3</td><td>0</td><td>0.50</td><td>Đúng ranh giới</td></tr>
+    <tr><td>5</td><td>2</td><td>0.88</td><td>Đậu (class 1)</td></tr>
+  </table></div>
+
+  <h3>3.4. Suy ra hàm mất mát: Log loss từ Maximum Likelihood</h3>
+  <p>Ở Linear Regression ta tự chọn MSE vì "sai số bình phương" khá hợp lý. Với xác suất, có một cách suy ra loss có cơ sở hơn: chọn tham số làm cho dữ liệu quan sát được trở nên "có khả năng xảy ra nhất" (Maximum Likelihood Estimation, MLE).</p>
+  <div class="derive">
+    <span class="tag">SUY RA</span>
+    <p><span class="step">Bước 1: xác suất của một mẫu.</span> Mô hình nói $P(y=1\mid x)=p$ và $P(y=0\mid x)=1-p$. Viết gọn cho cả hai trường hợp (phân phối Bernoulli):</p>
+    $$P(y\mid x)=p^{\,y}(1-p)^{1-y}$$
+    <p>(Thử: $y=1$ cho $p$; $y=0$ cho $1-p$.)</p>
+    <p><span class="step">Bước 2: xác suất của cả tập dữ liệu (likelihood).</span> Giả sử các mẫu độc lập, nhân xác suất lại:</p>
+    $$\mathcal L(w,b)=\prod_{i=1}^n p_i^{\,y_i}(1-p_i)^{1-y_i}$$
+    <p><span class="step">Bước 3: lấy logarit.</span> Tích thành tổng (dễ tính, không bị số quá nhỏ), và vì $\ln$ đồng biến nên cực đại của $\ln\mathcal L$ cũng là cực đại của $\mathcal L$:</p>
+    $$\ln\mathcal L=\sum_{i=1}^n\big[y_i\ln p_i+(1-y_i)\ln(1-p_i)\big]$$
+    <p><span class="step">Bước 4: đổi "cực đại" thành "cực tiểu" để khớp với Gradient Descent.</span> Đổi dấu và chia $n$:</p>
+    $$J=-\frac1n\sum_{i=1}^n\big[y_i\ln p_i+(1-y_i)\ln(1-p_i)\big]\quad\text{(log loss / binary cross-entropy)}$$
+  </div>
+  <p>Đọc nghĩa của nó: nếu $y=1$, loss của mẫu là $-\ln p$; nếu $y=0$, loss là $-\ln(1-p)$. Mô hình tự tin mà sai thì bị phạt rất nặng:</p>
+  <div class="tw"><table>
+    <tr><th>Dự đoán $p$ (khi $y=1$)</th><th>0.99</th><th>0.9</th><th>0.5</th><th>0.1</th><th>0.01</th></tr>
+    <tr><td>Loss $-\ln p$</td><td>0.01</td><td>0.11</td><td>0.69</td><td>2.30</td><td>4.61</td></tr>
+  </table></div>
+  <p>Chú ý: tương tự, nếu giả thiết nhiễu Gaussian trong Linear Regression rồi làm MLE, ta cũng ra đúng MSE. Nên MSE và log loss là "cùng một nguyên lý" cho hai kiểu dữ liệu khác nhau.</p>
+
+  <h3>3.5. Suy ra gradient của log loss</h3>
+  <p>Ta cần $\frac{\partial J}{\partial w}$ và $\frac{\partial J}{\partial b}$ để đưa vào update rule. Lại dùng quy tắc chuỗi, nhưng lần này có thêm đạo hàm của sigmoid.</p>
+  <div class="derive">
+    <span class="tag">SUY RA (1): đạo hàm của sigmoid</span>
+    <p>Từ $\sigma(z)=(1+e^{-z})^{-1}$:</p>
+    $$\sigma'(z)=\frac{e^{-z}}{(1+e^{-z})^2}=\frac{1}{1+e^{-z}}\cdot\frac{e^{-z}}{1+e^{-z}}=\sigma(z)\,\big(1-\sigma(z)\big)$$
+    <p>(Bước cuối vì $1-\sigma=\frac{e^{-z}}{1+e^{-z}}$.) Ký hiệu $p=\sigma(z)$ thì $\dfrac{\partial p}{\partial z}=p(1-p)$.</p>
+  </div>
+  <div class="derive">
+    <span class="tag">SUY RA (2): chuỗi cho một mẫu</span>
+    <p>Chuỗi tính toán: $w,b\;\to\;z=wx+b\;\to\;p=\sigma(z)\;\to\;L=-[y\ln p+(1-y)\ln(1-p)]$.</p>
+    <div class="tw"><table>
+      <tr><th>Lớp</th><th>Đạo hàm</th></tr>
+      <tr><td>$L$ theo $p$</td><td>$\dfrac{\partial L}{\partial p}=-\dfrac{y}{p}+\dfrac{1-y}{1-p}=\dfrac{p-y}{p(1-p)}$</td></tr>
+      <tr><td>$p$ theo $z$</td><td>$\dfrac{\partial p}{\partial z}=p(1-p)$</td></tr>
+      <tr><td>$z$ theo $w$, $b$</td><td>$\dfrac{\partial z}{\partial w}=x,\quad\dfrac{\partial z}{\partial b}=1$</td></tr>
+    </table></div>
+    <p>(Dòng đầu: quy đồng $-\frac{y}{p}+\frac{1-y}{1-p}=\frac{-y(1-p)+(1-y)p}{p(1-p)}=\frac{p-y}{p(1-p)}$.) Nhân theo chuỗi, thừa số $p(1-p)$ triệt tiêu:</p>
+    $$\frac{\partial L}{\partial w}=\frac{p-y}{p(1-p)}\cdot p(1-p)\cdot x=(p-y)\,x,\qquad \frac{\partial L}{\partial b}=p-y$$
+    <p>Lấy trung bình trên $n$ mẫu:</p>
+    $$\boxed{\;\frac{\partial J}{\partial w}=\frac1n\sum(p_i-y_i)\,x_i,\qquad \frac{\partial J}{\partial b}=\frac1n\sum(p_i-y_i)\;}$$
+  </div>
+  <div class="note">Điểm đẹp: gradient của Logistic Regression có dạng y hệt Linear Regression ở mục 2.3, chỉ thay $\hat y$ bằng $p$ (và bỏ hệ số 2). Sự triệt tiêu $p(1-p)$ không phải ngẫu nhiên: nó là phần thưởng của việc chọn log loss. Nếu dùng MSE với sigmoid, gradient còn nguyên thừa số $p(1-p)$. Khi mô hình tự tin mà sai (ví dụ $y=1$ nhưng $p\approx0$) thì $p(1-p)\approx0$ và gradient gần bằng 0, nên học gần như đứng yên. Log loss không bị vậy.</div>
+
+  <h3>3.6. Ghép lại: update rule và vì sao không có closed-form</h3>
+  <p>Đưa gradient vào update rule của mục 2.2:</p>
+  $$w\leftarrow w-\alpha\frac1n\sum(p_i-y_i)\,x_i,\qquad b\leftarrow b-\alpha\frac1n\sum(p_i-y_i)$$
+  <p>Thử tính tay một vòng với $w=1$, $b=-3$, $\alpha=0.1$ và 3 mẫu $(x,y)=(2,0),(3.5,0),(5,1)$:</p>
+  <div class="tw"><table>
+    <tr><th>$x$</th><th>$y$</th><th>$z=x-3$</th><th>$p=\sigma(z)$</th><th>$p-y$</th><th>$(p-y)x$</th></tr>
+    <tr><td>2</td><td>0</td><td>−1</td><td>0.269</td><td>0.269</td><td>0.538</td></tr>
+    <tr><td>3.5</td><td>0</td><td>0.5</td><td>0.622</td><td>0.622</td><td>2.179</td></tr>
+    <tr><td>5</td><td>1</td><td>2</td><td>0.881</td><td>−0.119</td><td>−0.596</td></tr>
+    <tr><td colspan="4">Trung bình trên 3 mẫu</td><td>0.257 (gradient theo $b$)</td><td>0.707 (gradient theo $w$)</td></tr>
+  </table></div>
+  <p>Vậy $w\leftarrow1-0.1\cdot0.707\approx0.929$ và $b\leftarrow-3-0.1\cdot0.257\approx-3.026$. Hai mẫu rớt đang bị dự đoán quá cao nên kéo $w$ và $b$ xuống một chút.</p>
+  <div class="derive">
+    <span class="tag">VÌ SAO KHÔNG GIẢI THẲNG NHƯ LINEAR REGRESSION?</span>
+    <p>Làm giống mục 1.4: cho $\frac{\partial J}{\partial b}=0$ ta được $\sum\big(\sigma(wx_i+b)-y_i\big)=0$. Phương trình này có $w$ và $b$ nằm bên trong hàm $\sigma$ (phi tuyến), nên ta không thể rút $w$, $b$ ra bằng đại số như $b=\bar y-w\bar x$. Chỉ còn cách giải bằng phương pháp lặp: Gradient Descent (hoặc phương pháp Newton). Đây chính là lý do quan trọng nhất ở mục 1.5.</p>
+  </div>
+  <div class="note">Log loss là hàm lồi (convex) theo $(w,b)$, nên Gradient Descent với $\alpha$ phù hợp tìm được cực tiểu toàn cục. Còn MSE kết hợp với sigmoid thì không lồi.</div>
+
+  <h3>3.7. Hình 3: ví dụ số giờ học và kết quả đậu/rớt</h3>
+  <p>Chấm xanh là đậu ($y=1$), hình thoi đỏ là rớt ($y=0$). Kéo $w$, $b$ để thấy đường sigmoid và decision boundary dịch chuyển, hoặc bấm nút để máy tự lặp update rule ở mục 3.6.</p>
+  <div class="widget">
+    <h4>Hình 3: Logistic Regression tương tác</h4>
+    <div class="ctrl">
+      <div><label>Weight w: <b id="w3v">1.0</b></label><input type="range" id="w3" min="0" max="4" step="0.1" value="1"></div>
+      <div><label>Bias b: <b id="b3v">-3.0</b></label><input type="range" id="b3" min="-15" max="2" step="0.1" value="-3"></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><div class="l">Cost (log loss)</div><div class="v" id="ll3">0</div></div>
+      <div class="metric"><div class="l">Decision boundary x = -b/w</div><div class="v" id="xb3">0</div></div>
+      <div class="metric"><div class="l">Accuracy</div><div class="v" id="acc3">0</div></div>
+    </div>
+    <div class="btns"><button id="fit3">Run Gradient Descent</button></div>
+    <div class="legend">
+      <span><i style="background:#2a78d6"></i>Pass (y=1)</span>
+      <span><i style="background:#e34948"></i>Fail (y=0)</span>
+      <span><i style="background:#eb6834"></i>Sigmoid σ(wx+b)</span>
+      <span><i style="background:#898781"></i>Decision boundary</span>
+    </div>
+    <div class="chart"><canvas id="c3" role="img" aria-label="Đường sigmoid, dữ liệu đậu rớt và decision boundary"></canvas></div>
+  </div>
+  <p>Dữ liệu này cố ý chồng lấn (một bạn học 3.5 giờ vẫn rớt), nên không có đường nào đạt accuracy 100%. Log loss giúp chọn đường tốt nhất theo xác suất thay vì chỉ đếm đúng sai. Sau khi bấm nút chạy Gradient Descent, cost giảm và decision boundary tự dịch về vị trí hợp lý giữa hai nhóm.</p>
+</section>
+
+<section id="banpd">
+  <h2>Bản đồ công thức: công thức nào suy ra từ đâu</h2>
+  <div class="tw"><table>
+    <tr><th>Công thức</th><th>Suy ra từ</th><th>Bằng cách</th><th>Mục</th></tr>
+    <tr><td>$\hat y=wx+b$</td><td>Giả thiết</td><td>Chọn dạng đường thẳng</td><td>1.1</td></tr>
+    <tr><td>$J=\frac1n\sum(\hat y_i-y_i)^2$ (MSE)</td><td>Sai số $e_i=\hat y_i-y_i$</td><td>Bình phương rồi lấy trung bình</td><td>1.2</td></tr>
+    <tr><td>$\mathbf w=(X^\top X)^{-1}X^\top\mathbf y$</td><td>MSE</td><td>Cho $\nabla J=0$ rồi giải</td><td>1.4</td></tr>
+    <tr><td>$\theta\leftarrow\theta-\alpha\nabla J$</td><td>Taylor bậc 1 của $J$</td><td>Chọn $\Delta$ ngược hướng gradient (Cauchy–Schwarz)</td><td>2.2</td></tr>
+    <tr><td>$\frac{\partial J}{\partial w}=\frac2n\sum(\hat y_i-y_i)x_i$</td><td>MSE</td><td>Quy tắc chuỗi qua $L\to e\to\hat y\to w$</td><td>2.3</td></tr>
+    <tr><td>Hệ số $(1-2\alpha)$</td><td>Update rule và $J=(w-3)^2+1$</td><td>Thế $J'$ vào update rule</td><td>2.5</td></tr>
+    <tr><td>$\sigma(z)=\frac1{1+e^{-z}}$</td><td>Giả thiết log-odds tuyến tính</td><td>Giải $\ln\frac p{1-p}=z$ theo $p$</td><td>3.2</td></tr>
+    <tr><td>$x=-b/w$</td><td>Sigmoid và ngưỡng 0.5</td><td>$p\ge0.5\iff z\ge0$</td><td>3.3</td></tr>
+    <tr><td>Log loss</td><td>Phân phối Bernoulli</td><td>Maximum Likelihood: nhân, lấy $\ln$, đổi dấu, chia $n$</td><td>3.4</td></tr>
+    <tr><td>$\sigma'=\sigma(1-\sigma)$</td><td>Sigmoid</td><td>Đạo hàm của $(1+e^{-z})^{-1}$</td><td>3.5</td></tr>
+    <tr><td>$\frac{\partial J}{\partial w}=\frac1n\sum(p_i-y_i)x_i$</td><td>Log loss và $\sigma'$</td><td>Quy tắc chuỗi, $p(1-p)$ triệt tiêu</td><td>3.5</td></tr>
+  </table></div>
+</section>
+
+<section id="tomtat">
+  <h2>Tóm tắt so sánh</h2>
+  <div class="tw"><table>
+    <tr><th></th><th>Linear Regression</th><th>Logistic Regression</th></tr>
+    <tr><td>Loại bài toán</td><td>Regression (số thực)</td><td>Binary classification</td></tr>
+    <tr><td>Prediction</td><td>$\hat y=wx+b$</td><td>$p=\sigma(wx+b)$ (probability)</td></tr>
+    <tr><td>Giả thiết cốt lõi</td><td>Quan hệ tuyến tính, sai số nhỏ</td><td>Log-odds tuyến tính</td></tr>
+    <tr><td>Loss / Cost function</td><td>MSE</td><td>Log loss (binary cross-entropy)</td></tr>
+    <tr><td>Gốc của loss</td><td>Bình phương sai số (hoặc MLE với nhiễu Gaussian)</td><td>MLE với phân phối Bernoulli</td></tr>
+    <tr><td>Gradient theo $w$</td><td>$\frac{2}{n}\sum(\hat y_i-y_i)x_i$</td><td>$\frac{1}{n}\sum(p_i-y_i)x_i$</td></tr>
+    <tr><td>Cách tìm $w,b$</td><td>Normal Equation hoặc Gradient Descent</td><td>Gradient Descent (không có closed-form)</td></tr>
+  </table></div>
+  <p>Quy trình chung (training pipeline):</p>
+  <p>1. Chọn model (đường thẳng, hoặc đường thẳng cộng sigmoid).<br>
+     2. Chọn loss/cost function để đo mô hình sai bao nhiêu.<br>
+     3. Tính gradient của cost bằng quy tắc chuỗi.<br>
+     4. Lặp update rule $\theta\leftarrow\theta-\alpha\nabla J$ qua các iteration và epoch cho tới khi hội tụ.</p>
+  <div class="warn">Lưu ý thực hành: nếu dữ liệu tách được hoàn toàn bằng một đường thẳng, logistic regression sẽ đẩy $|w|\to\infty$ (vì càng tự tin càng giảm loss), nên cần thêm regularization (ví dụ L2: cộng $\lambda\lVert\mathbf w\rVert^2$ vào cost).</div>
+</section>
+
+<section id="thuatngu">
+  <h2>Bảng thuật ngữ để ôn nhanh</h2>
+  <div class="tw"><table>
+    <tr><th>Tiếng Anh</th><th>Tiếng Việt</th><th>Ghi nhớ</th></tr>
+    <tr><td>Feature / input</td><td>Đặc trưng / đầu vào</td><td>$x$</td></tr>
+    <tr><td>Target / label</td><td>Nhãn / đáp án thật</td><td>$y$</td></tr>
+    <tr><td>Prediction</td><td>Giá trị dự đoán</td><td>$\hat y$ hoặc $p$</td></tr>
+    <tr><td>Parameters (weight, bias)</td><td>Tham số (trọng số, độ lệch)</td><td>$w$, $b$, thứ máy học</td></tr>
+    <tr><td>Hyperparameter</td><td>Siêu tham số</td><td>Người chọn, ví dụ learning rate</td></tr>
+    <tr><td>Residual / error</td><td>Sai số</td><td>$\hat y-y$</td></tr>
+    <tr><td>Loss function</td><td>Hàm mất mát</td><td>Sai số của một mẫu</td></tr>
+    <tr><td>Cost function</td><td>Hàm chi phí</td><td>Trung bình loss trên cả tập, $J$</td></tr>
+    <tr><td>MSE</td><td>Sai số bình phương trung bình</td><td>Cost của Linear Regression</td></tr>
+    <tr><td>Closed-form / Normal Equation / OLS</td><td>Nghiệm dạng đóng</td><td>Cho $\nabla J=0$ rồi giải, không cần lặp</td></tr>
+    <tr><td>Derivative / partial derivative / gradient</td><td>Đạo hàm / đạo hàm riêng / vector gradient</td><td>Độ dốc của cost</td></tr>
+    <tr><td>Chain rule</td><td>Quy tắc chuỗi</td><td>Đạo hàm hàm lồng = tích các đạo hàm từng lớp</td></tr>
+    <tr><td>Taylor expansion</td><td>Khai triển Taylor</td><td>Xấp xỉ $J$ gần một điểm bằng hàm tuyến tính</td></tr>
+    <tr><td>Gradient Descent</td><td>Hạ gradient</td><td>$\theta\leftarrow\theta-\alpha\nabla J$</td></tr>
+    <tr><td>Learning rate</td><td>Tốc độ học</td><td>$\alpha$, độ dài mỗi bước</td></tr>
+    <tr><td>Iteration / epoch</td><td>Vòng lặp / một lượt qua toàn bộ dữ liệu</td><td></td></tr>
+    <tr><td>Convergence / divergence</td><td>Hội tụ / phân kỳ</td><td>Cost giảm dần / tăng vọt</td></tr>
+    <tr><td>Batch / SGD / Mini-batch</td><td>Số mẫu mỗi lần cập nhật</td><td>Tất cả / 1 / một nhóm nhỏ</td></tr>
+    <tr><td>Feature scaling</td><td>Chuẩn hóa đặc trưng</td><td>Giúp hội tụ nhanh, ổn định</td></tr>
+    <tr><td>Convex / global minimum</td><td>Hàm lồi / cực tiểu toàn cục</td><td>Chỉ có một đáy</td></tr>
+    <tr><td>Odds / log-odds (logit)</td><td>Tỉ lệ cược / logarit của nó</td><td>$\frac{p}{1-p}$, $\ln\frac{p}{1-p}=z$</td></tr>
+    <tr><td>Sigmoid / logistic function</td><td>Hàm sigmoid</td><td>Nén $z$ về khoảng 0 đến 1</td></tr>
+    <tr><td>Threshold / decision boundary</td><td>Ngưỡng / ranh giới quyết định</td><td>0.5 / $x=-b/w$</td></tr>
+    <tr><td>Likelihood / MLE</td><td>Hàm hợp lý / ước lượng hợp lý cực đại</td><td>Chọn tham số làm dữ liệu "dễ xảy ra" nhất</td></tr>
+    <tr><td>Log loss / Binary cross-entropy</td><td>Cost của Logistic Regression</td><td>$-\ln$ likelihood trung bình</td></tr>
+    <tr><td>Accuracy</td><td>Độ chính xác</td><td>Tỉ lệ dự đoán đúng</td></tr>
+    <tr><td>Regularization (L2 / Ridge)</td><td>Chính quy hóa</td><td>Thêm $\lambda\lVert\mathbf w\rVert^2$ vào cost để chống overfitting</td></tr>
+    <tr><td>Overfitting</td><td>Quá khớp</td><td>Giỏi trên dữ liệu học, kém trên dữ liệu mới</td></tr>
+    <tr><td>Softmax regression</td><td>Mở rộng cho nhiều lớp</td><td>Multiclass classification</td></tr>
+  </table></div>
+</section>
+
+</main>
+<footer>
+  <div class="wrap">File cần kết nối Internet để tải thư viện vẽ đồ thị (Chart.js) và hiển thị công thức (KaTeX).</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function(){
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false}
+      ],
+      throwOnError: false
+    });
+  }
+})();
+</script>
+<script>
+(function(){
+  var GRID = 'rgba(128,128,128,0.2)', TICK = '#898781';
+  function axis(title, min, max, extra){
+    var o = {min:min, max:max, title:{display:true, text:title, color:TICK}, ticks:{color:TICK}, grid:{color:GRID}};
+    if (extra) { for (var k in extra) { o[k] = extra[k]; } }
+    return o;
+  }
+
+  var X1=[1,2,3,4,5,6,7,8], Y1=[3.2,4.8,7.5,8.7,11.4,12.6,15.3,16.5];
+  var n1=X1.length, mx=X1.reduce(function(a,c){return a+c;},0)/n1, my=Y1.reduce(function(a,c){return a+c;},0)/n1;
+  var sxy=0, sxx=0;
+  X1.forEach(function(x,i){ sxy+=(x-mx)*(Y1[i]-my); sxx+=(x-mx)*(x-mx); });
+  var wo=sxy/sxx, bo=my-wo*mx;
+  function mseOf(w,b){ var s=0; for (var i=0;i<n1;i++){ s+=Math.pow(w*X1[i]+b-Y1[i],2); } return s/n1; }
+  var w1=document.getElementById('w1'), b1=document.getElementById('b1');
+  document.getElementById('msemin1').textContent = mseOf(wo,bo).toFixed(2);
+  var residPlugin = {
+    id: 'resid',
+    afterDatasetsDraw: function(c){
+      var ctx=c.ctx, sx=c.scales.x, sy=c.scales.y, w=+w1.value, b=+b1.value;
+      ctx.save();
+      ctx.strokeStyle='rgba(227,73,72,0.8)'; ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+      X1.forEach(function(x,i){
+        ctx.beginPath();
+        ctx.moveTo(sx.getPixelForValue(x), sy.getPixelForValue(Y1[i]));
+        ctx.lineTo(sx.getPixelForValue(x), sy.getPixelForValue(w*x+b));
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+  };
+  var chart1 = new Chart(document.getElementById('c1'), {
+    type: 'scatter',
+    data: { datasets: [
+      { data: X1.map(function(x,i){ return {x:x, y:Y1[i]}; }), backgroundColor:'#2a78d6', pointRadius:6 },
+      { data: [{x:0,y:0},{x:9,y:9}], showLine:true, borderColor:'#eb6834', borderWidth:2, pointRadius:0 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}},
+      scales: { x: axis('Feature x (diện tích)', 0, 9), y: axis('Target y (giá)', -2, 20) } },
+    plugins: [residPlugin]
+  });
+  function upd1(){
+    var w=+w1.value, b=+b1.value;
+    document.getElementById('w1v').textContent = w.toFixed(1);
+    document.getElementById('b1v').textContent = b.toFixed(1);
+    document.getElementById('mse1').textContent = mseOf(w,b).toFixed(2);
+    chart1.data.datasets[1].data = [{x:0,y:b},{x:9,y:9*w+b}];
+    chart1.update();
+  }
+  w1.oninput = upd1; b1.oninput = upd1;
+  document.getElementById('fit1').onclick = function(){
+    w1.value = Math.round(wo*10)/10; b1.value = Math.round(bo*10)/10; upd1();
+  };
+  upd1();
+
+  var J2 = function(w){ return (w-3)*(w-3)+1; };
+  var curve2 = [];
+  for (var w=-2; w<=8.001; w+=0.1){ curve2.push({x:w, y:J2(w)}); }
+  var hist2 = [-1];
+  var a2 = document.getElementById('a2');
+  var chart2 = new Chart(document.getElementById('c2'), {
+    type: 'scatter',
+    data: { datasets: [
+      { data: curve2, showLine:true, borderColor:'#2a78d6', borderWidth:2, pointRadius:0 },
+      { data: [], showLine:true, borderColor:'#eb6834', borderDash:[4,4], borderWidth:1.5, backgroundColor:'#eb6834', pointRadius:5 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}},
+      scales: { x: axis('Weight w', -2, 8), y: axis('Cost J(w)', 0, 30) } }
+  });
+  function draw2(){
+    var wc = hist2[hist2.length-1], g = 2*(wc-3);
+    document.getElementById('t2').textContent = hist2.length-1;
+    document.getElementById('w2v').textContent = Math.abs(wc)>1e4 ? '∞' : wc.toFixed(2);
+    document.getElementById('j2v').textContent = J2(wc)>1e6 ? '∞' : J2(wc).toFixed(2);
+    document.getElementById('g2v').textContent = Math.abs(g)>1e4 ? '∞' : g.toFixed(2);
+    chart2.data.datasets[1].data = hist2.map(function(h){ return {x:h, y:J2(h)}; });
+    chart2.update();
+  }
+  function step2(){ var wc=hist2[hist2.length-1]; hist2.push(wc - (+a2.value)*2*(wc-3)); }
+  a2.oninput = function(){ document.getElementById('a2v').textContent = (+a2.value).toFixed(2); };
+  document.getElementById('step2').onclick = function(){ step2(); draw2(); };
+  document.getElementById('run2').onclick = function(){ for (var i=0;i<10;i++){ step2(); } draw2(); };
+  document.getElementById('reset2').onclick = function(){ hist2=[-1]; draw2(); };
+  draw2();
+
+  var X3=[1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5], Y3=[0,0,0,0,1,0,1,0,1,1,1,1];
+  var n3=X3.length;
+  function sig(z){ return 1/(1+Math.exp(-z)); }
+  var w3=document.getElementById('w3'), b3=document.getElementById('b3');
+  function loss3(w,b){
+    var s=0;
+    for (var i=0;i<n3;i++){
+      var p=Math.min(Math.max(sig(w*X3[i]+b),1e-9),1-1e-9);
+      s += Y3[i]*Math.log(p) + (1-Y3[i])*Math.log(1-p);
+    }
+    return -s/n3;
+  }
+  function acc3(w,b){
+    var c=0;
+    for (var i=0;i<n3;i++){ if ((sig(w*X3[i]+b)>=0.5?1:0)===Y3[i]) c++; }
+    return c/n3;
+  }
+  function curve3(w,b){ var a=[]; for (var x=0;x<=8.001;x+=0.1){ a.push({x:x, y:sig(w*x+b)}); } return a; }
+  var chart3 = new Chart(document.getElementById('c3'), {
+    type: 'scatter',
+    data: { datasets: [
+      { data: X3.map(function(x,i){ return {x:x, y:Y3[i]}; }),
+        pointBackgroundColor: Y3.map(function(y){ return y?'#2a78d6':'#e34948'; }),
+        pointStyle: Y3.map(function(y){ return y?'circle':'rectRot'; }), pointRadius:7 },
+      { data: [], showLine:true, borderColor:'#eb6834', borderWidth:2, pointRadius:0 },
+      { data: [], showLine:true, borderColor:'#898781', borderDash:[5,5], borderWidth:1.5, pointRadius:0 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}},
+      scales: {
+        x: axis('Feature x (số giờ học)', 0, 8),
+        y: axis('Probability P(y=1)', -0.1, 1.1, { ticks:{ color:TICK, callback:function(v){ return (v>=0 && v<=1) ? v : ''; } } })
+      } }
+  });
+  function upd3(){
+    var w=+w3.value, b=+b3.value;
+    document.getElementById('w3v').textContent = w.toFixed(1);
+    document.getElementById('b3v').textContent = b.toFixed(1);
+    document.getElementById('ll3').textContent = loss3(w,b).toFixed(3);
+    document.getElementById('acc3').textContent = Math.round(acc3(w,b)*100)+'%';
+    var xb = w>0 ? -b/w : null;
+    document.getElementById('xb3').textContent = xb===null ? '—' : xb.toFixed(2);
+    chart3.data.datasets[1].data = curve3(w,b);
+    chart3.data.datasets[2].data = xb===null ? [] : [{x:xb,y:-0.1},{x:xb,y:1.1}];
+    chart3.update();
+  }
+  w3.oninput = upd3; b3.oninput = upd3;
+  document.getElementById('fit3').onclick = function(){
+    var w=0, b=0, lr=0.05;
+    for (var k=0;k<30000;k++){
+      var gw=0, gb=0;
+      for (var i=0;i<n3;i++){ var e=sig(w*X3[i]+b)-Y3[i]; gw+=e*X3[i]; gb+=e; }
+      w -= lr*gw/n3; b -= lr*gb/n3;
+    }
+    w3.value = Math.min(4, Math.max(0, Math.round(w*10)/10));
+    b3.value = Math.min(2, Math.max(-15, Math.round(b*10)/10));
+    upd3();
+  };
+  upd3();
+})();
+</script>
+</body>
+</html>

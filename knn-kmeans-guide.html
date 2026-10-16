@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KNN và K-means</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+:root{--surface-1:var(--bg);--surface-2:var(--surface);--text-primary:var(--text);--text-secondary:var(--muted);--text-muted:var(--muted);--border-strong:var(--muted)}
+.fig{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0}
+.fig select,.fig button{font:inherit;font-size:13px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+.fig input[type=range]{width:100%}
+.fig td{padding:2px 4px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>KNN và K-means clustering</h1><p>Các loại khoảng cách, KNN và K-means từng bước, kèm 3 hình tương tác.</p></div></header>
+<nav><div class="wrap"><a href="#k1">1. Khoảng cách</a><a href="#k2">2. KNN</a><a href="#k3">3. K-means</a><a href="#k4">Tóm tắt</a></div></nav>
+<main class="wrap">
+<section id="k1"><h2>Phần 1: Các loại khoảng cách (distance metrics)</h2>
+<p>KNN và K-means khác nhau (một cái có nhãn, một cái không), nhưng cùng dựa vào một câu hỏi: <b>hai điểm gần nhau là gì?</b> Mỗi cách định nghĩa "gần" cho ra một công thức khác nhau. Ví dụ chung: $A=(1,2)$ và $B=(4,6)$, hiệu từng chiều $\Delta_1=|1-4|=3$ và $\Delta_2=|2-6|=4$.</p>
+<h3>1) Euclid (đường chim bay, $L_2$)</h3>
+$$d_2=\sqrt{\Delta_1^2+\Delta_2^2}=\sqrt{9+16}=\mathbf{5}$$
+<p>Đây là Pythagoras: đi thẳng từ A tới B.</p>
+<h3>2) Manhattan (đi theo ô phố, $L_1$)</h3>
+$$d_1=\Delta_1+\Delta_2=3+4=\mathbf{7}$$
+<p>Chỉ được đi ngang rồi đi dọc. Ít bị một chiều lệch lớn chi phối hơn Euclid vì không bình phương.</p>
+<h3>3) Chebyshev ($L_\infty$)</h3>
+$$d_\infty=\max(\Delta_1,\Delta_2)=\max(3,4)=\mathbf{4}$$
+<p>Chỉ quan tâm chiều lệch nhiều nhất, như quân vua cờ vua đi chéo cũng chỉ tốn 1 nước.</p>
+<h3>4) Minkowski (công thức tổng quát cho cả ba loại trên)</h3>
+$$d_p=\Big(\sum_j|\Delta_j|^p\Big)^{1/p}$$
+<p>Với $p=1$ ta được Manhattan, $p=2$ ta được Euclid, $p\to\infty$ ta được Chebyshev. Ví dụ $p=3$: $(27+64)^{1/3}=91^{1/3}=\mathbf{4.498}$. Để ý <b>p càng lớn thì khoảng cách càng nhỏ dần về 4</b>, vì chiều lệch lớn nhất ngày càng quyết định kết quả.</p>
+<h3>5) Cosine (đo hướng, không đo độ dài)</h3>
+$$\cos\theta=\frac{A\cdot B}{\|A\|\,\|B\|}=\frac{1\cdot4+2\cdot6}{\sqrt{5}\,\sqrt{52}}=\frac{16}{16.125}=0.9923,\qquad d_{\cos}=1-\cos\theta=\mathbf{0.0077}$$
+<p>Hai vector gần như cùng hướng ($\theta\approx7.1^\circ$) nên rất "gần". Lấy $C=(10,20)$ thì $A$ và $C$ cùng hướng tuyệt đối, nên $d_{\cos}=0$, trong khi $d_2(A,C)=20.12$ lại rất lớn. Vì vậy cosine hay dùng cho văn bản (TF-IDF), nơi độ dài văn bản không quan trọng bằng tỉ lệ các từ.</p>
+<h3>6) Hamming (dữ liệu nhị phân hoặc chuỗi)</h3>
+<p>Đếm số vị trí khác nhau. Ví dụ <code>10110</code> so với <code>11100</code> khác ở vị trí 2 và 4, nên $d_H=\mathbf{2}$. (Mahalanobis dùng thêm ma trận hiệp phương sai để tính tương quan giữa các feature, chưa trình bày ở đây.)</p>
+<h3>Chọn loại nào?</h3>
+<div class="tw"><table>
+<tr><th>Tình huống</th><th>Gợi ý</th></tr>
+<tr><td>Feature liên tục, cùng đơn vị (đã chuẩn hoá)</td><td>Euclid (mặc định)</td></tr>
+<tr><td>Nhiều chiều, hoặc có outlier ở từng feature</td><td>Manhattan</td></tr>
+<tr><td>Quan tâm chênh lệch lớn nhất</td><td>Chebyshev</td></tr>
+<tr><td>Văn bản, vector thưa, embedding</td><td>Cosine</td></tr>
+<tr><td>Feature nhị phân / chuỗi</td><td>Hamming</td></tr>
+</table></div>
+<h3>Hình 1: So sánh các khoảng cách</h3>
+<div class="fig"><div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<svg id="s1" viewBox="0 0 336 308" style="width:336px;max-width:100%;flex:0 0 auto;background:var(--surface-1);border-radius:12px"></svg>
+<div style="flex:1;min-width:250px">
+<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:13px">
+<span>B.x</span><input type="range" id="bx" min="0" max="8" step="0.5" value="4"><b id="bxv">4</b>
+<span>B.y</span><input type="range" id="by" min="0" max="8" step="0.5" value="6"><b id="byv">6</b>
+<span>Bán kính r</span><input type="range" id="rr" min="1" max="5" step="0.5" value="3"><b id="rrv">3</b>
+<span>p (Minkowski)</span><input type="range" id="pp" min="1" max="8" step="0.5" value="3"><b id="ppv">3</b>
+</div>
+<div style="margin:10px 0 6px;font-size:13px;display:flex;gap:8px;align-items:center">Vùng cách A đúng r theo:
+<select id="mt"><option value="1">Manhattan (p=1)</option><option value="2" selected>Euclid (p=2)</option><option value="inf">Chebyshev (p=∞)</option><option value="p">Minkowski (p kéo ở trên)</option></select></div>
+<table style="width:100%;font-size:13px;border-collapse:collapse" id="tb"></table>
+<div id="inn" style="margin-top:8px;font-size:13px"></div>
+</div></div></div>
+
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li><b>A</b> (tím) cố định tại (1, 2). <b>B</b> (xanh lá) kéo bằng slider B.x, B.y. Mặc định B = (4, 6), chính là ví dụ ở trên.</li>
+<li><b>Đường đỏ cam</b> là Euclid, <b>đường vàng</b> là Manhattan. Bảng bên phải hiện 5, 7, 4, 4.498, 0.0077 khi B = (4, 6). Kéo B và xem số nào đổi nhanh nhất.</li>
+<li><b>Hai đường chấm xám</b> nối gốc O với A và với B. Góc giữa chúng là θ của cosine. Thử B = (2, 4): cùng hướng với A nên cos θ = 1 và cosine distance = 0, dù Euclid khác 0.</li>
+<li><b>Vùng tím</b> là tập các điểm cách A đúng r theo loại khoảng cách đang chọn: Manhattan là hình thoi, Euclid là hình tròn, Chebyshev là hình vuông. Dùng "Minkowski" với slider p để thấy hình tròn biến dần thành hình vuông khi p tăng.</li>
+<li>Dòng cuối cho biết B nằm trong hay ngoài vùng. Đây là điều KNN làm: <b>K điểm gần nhất là những điểm nằm trong vùng nhỏ nhất đủ chứa K điểm</b>, và vùng này đổi hình theo loại khoảng cách.</li></ul></div>
+</section>
+
+<section id="k2"><h2>Phần 2: KNN (K-Nearest Neighbors)</h2>
+<p><b>Ý tưởng:</b> hỏi K người hàng xóm gần nhất rồi theo đa số. KNN là <i>lazy learning</i>: không có bước train, chỉ lưu dữ liệu.</p>
+<h3>2.1 Công thức</h3>
+<p>Với điểm mới $q$ và tập huấn luyện $\{(x_i,y_i)\}$: tính $d_i=d(q,x_i)$ cho mọi $i$, gọi $\mathcal N_K(q)$ là tập chỉ số của K điểm có $d_i$ nhỏ nhất, rồi dự đoán:</p>
+$$\hat y=\arg\max_{c}\sum_{i\in\mathcal N_K(q)}\mathbb 1[y_i=c]\qquad(\text{classification})$$
+$$\hat y=\frac1K\sum_{i\in\mathcal N_K(q)}y_i\qquad(\text{regression})$$
+<p>$\mathbb 1[\cdot]$ bằng 1 nếu điều kiện đúng, ngược lại bằng 0. Công thức đầu chỉ là "đếm phiếu mỗi lớp rồi chọn lớp nhiều phiếu nhất". <b>Weighted KNN</b> thay mỗi phiếu bằng trọng số $w_i=1/d_i$:</p>
+$$\hat y=\arg\max_c\sum_{i\in\mathcal N_K(q)}w_i\,\mathbb 1[y_i=c]$$
+<h3>2.2 Ví dụ trên một điểm</h3>
+<p>Dữ liệu có 6 điểm $(x_1,x_2)$ và nhãn, điểm cần phân loại $q=(3.5,\,3.2)$. Ví dụ điểm #4: $d=\sqrt{(3.5-4)^2+(3.2-3)^2}=\sqrt{0.25+0.04}=0.539$.</p>
+<div class="tw"><table>
+<tr><th>#</th><th>$(x_1,x_2)$</th><th>nhãn</th><th>$d(q,x_i)$</th><th>hạng</th></tr>
+<tr><td>1</td><td>(1, 1)</td><td>A</td><td>3.330</td><td>6</td></tr>
+<tr><td>2</td><td>(2, 2)</td><td>A</td><td>1.921</td><td>3</td></tr>
+<tr><td>3</td><td>(3, 4)</td><td>B</td><td>0.943</td><td>2</td></tr>
+<tr><td>4</td><td>(4, 3)</td><td>A</td><td>0.539</td><td>1</td></tr>
+<tr><td>5</td><td>(5, 5)</td><td>B</td><td>2.343</td><td>4</td></tr>
+<tr><td>6</td><td>(6, 4)</td><td>B</td><td>2.625</td><td>5</td></tr>
+</table></div>
+<div class="tw"><table>
+<tr><th>K</th><th>K điểm gần nhất</th><th>Phiếu</th><th>Kết quả</th></tr>
+<tr><td>1</td><td>#4</td><td>A=1</td><td><b>A</b></td></tr>
+<tr><td>3</td><td>#4, #3, #2</td><td>A=2, B=1</td><td><b>A</b></td></tr>
+<tr><td>5</td><td>#4, #3, #2, #5, #6</td><td>A=2, B=3</td><td><b>B</b></td></tr>
+</table></div>
+<p>Với K = 5 và trọng số $1/d$: tổng của A (#4, #2) là $1/0.539+1/1.921=1.855+0.521=2.376$; tổng của B (#3, #5, #6) là $1/0.943+1/2.343+1/2.625=1.060+0.427+0.381=1.868$. Kết quả: <b>A thắng</b>, ngược với phiếu đa số, vì điểm #4 rất gần nên một mình nó đã nặng ký.</p>
+<h3>2.3 Chuẩn hoá feature, vì sao bắt buộc</h3>
+<p>Giả sử feature là (tuổi, lương VND), $q=(30,\,50\text{tr})$, $A=(60,\,51\text{tr})$, $B=(31,\,70\text{tr})$.</p>
+<ul>
+<li>Euclid thô: $d(q,A)\approx1{,}000{,}000$ và $d(q,B)\approx20{,}000{,}000$, nên q gần A. Nhưng A hơn q tới 30 tuổi còn B chỉ hơn 1 tuổi: tuổi bị lương "nuốt mất".</li>
+<li>Sau min–max $x'=\frac{x-\min}{\max-\min}$ (tuổi trong [20, 60], lương trong [30tr, 100tr]): $q'=(0.25,\,0.286)$, $A'=(1,\,0.3)$, $B'=(0.275,\,0.571)$. Khi đó $d(q',A')=0.750$ và $d(q',B')=0.287$, nên q gần <b>B</b>, đúng trực giác hơn.</li></ul>
+<p>Cách khác là z-score $x'=\frac{x-\mu}{\sigma}$. Tính $\min,\max,\mu,\sigma$ trên tập train rồi áp dụng cho cả q.</p>
+<h3>2.4 Ảnh hưởng của K, và những điểm cần nhớ</h3>
+<ul>
+<li><b>K nhỏ</b> (K=1): ranh giới răng cưa, bám theo nhiễu (overfitting, variance cao). <b>K lớn</b>: ranh giới mượt nhưng bỏ qua cấu trúc thật (underfitting, bias cao). Chọn K bằng cross-validation; với 2 lớp nên chọn K lẻ để tránh hòa.</li>
+<li>Không tốn thời gian train nhưng mỗi lần dự đoán tốn $O(N\cdot n)$. Có thể tăng tốc bằng KD-tree hoặc Ball-tree.</li>
+<li><b>Curse of dimensionality:</b> ở số chiều cao, mọi điểm đều "xa nhau như nhau" nên khoảng cách mất ý nghĩa.</li></ul>
+<h3>Hình 2: KNN tương tác</h3>
+<div class="fig"><div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<svg id="s2" viewBox="0 0 308 308" style="width:308px;max-width:100%;flex:0 0 auto;background:var(--surface-1);border-radius:12px"></svg>
+<div style="flex:1;min-width:260px">
+<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:13px">
+<span>q.x</span><input type="range" id="qx" min="0" max="7" step="0.1" value="3.5"><b id="qxv"></b>
+<span>q.y</span><input type="range" id="qy" min="0" max="7" step="0.1" value="3.2"><b id="qyv"></b>
+<span>K</span><input type="range" id="kk" min="1" max="6" step="1" value="3"><b id="kkv"></b>
+</div>
+<div style="margin:10px 0;font-size:13px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+<select id="mt2"><option value="e">Euclid</option><option value="m">Manhattan</option><option value="c">Chebyshev</option></select>
+<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="wt"> Trọng số 1/d</label></div>
+<table style="width:100%;font-size:13px;border-collapse:collapse" id="tb2"></table>
+<div id="res" style="margin-top:10px;font-size:14px"></div>
+</div></div></div>
+
+<div class="how"><h4>Cách đọc Hình 2</h4><ul>
+<li>6 điểm dữ liệu giống ví dụ trên (#1 đến #6), nhãn A tím và nhãn B cam. Điểm tròn trắng viền màu là <b>q</b>, viền có màu của nhãn dự đoán. Mặc định q = (3.5, 3.2), K = 3, Euclid cho kết quả <b>A</b>.</li>
+<li><b>Nền màu nhạt</b> là vùng quyết định: đặt q vào chỗ nào thì được dự đoán nhãn gì. Kéo K và xem ranh giới đổi: K = 1 chia nền thành các mảnh bám từng điểm, K = 5 mượt hơn.</li>
+<li>K = 6 thì dữ liệu có 3 A và 3 B nên luôn <b>hòa</b>. Khi tắt trọng số, quy tắc hòa lấy nhãn của điểm gần nhất, nên kết quả giống hệt K = 1. Bật trọng số $1/d$ thì K = 6 không còn hòa.</li>
+<li><b>Đường nét đứt</b> bao quanh q là vùng chứa vừa đủ K láng giềng. Đổi sang Manhattan thì nó thành hình thoi, Chebyshev thì thành hình vuông (như vùng tím ở Hình 1). Hai loại khoảng cách có thể chọn ra tập láng giềng khác nhau.</li>
+<li><b>Bảng</b> liệt kê 6 điểm theo khoảng cách tăng dần; hàng in đậm là K điểm được tính phiếu. Cột cuối là phiếu (1) hoặc trọng số $1/d$ khi bật ô "Trọng số".</li>
+<li>Thử lại ví dụ 2.2: K = 5, q = (3.5, 3.2), Euclid. Tắt trọng số thì B thắng (3 so với 2); bật trọng số thì A thắng (2.376 so với 1.868).</li>
+<li>Thử q = (0, 7), xa mọi điểm: dự đoán vẫn đưa ra dù q ở vùng chưa từng thấy. KNN không biết mình đang ngoại suy.</li></ul></div>
+</section>
+
+<section id="k3"><h2>Phần 3: K-means clustering</h2>
+<h3>3.1 Ý tưởng và công thức</h3>
+<p>Không có nhãn. Mục tiêu: tìm K tâm $\mu_1,\dots,\mu_K$ và cách gán $c_i\in\{1..K\}$ để cực tiểu</p>
+$$J(c,\mu)=\sum_{i=1}^{N}\|x_i-\mu_{c_i}\|^2$$
+<p>Bài toán này khó giải trực tiếp (NP-hard) vì phải chọn đồng thời $c$ lẫn $\mu$. Mẹo là <b>cố định một cái, tối ưu cái kia</b>:</p>
+<ul>
+<li><b>Cố định $\mu$, tối ưu $c$ (Assignment):</b> mỗi điểm chọn tâm gần nhất, $c_i=\arg\min_k\|x_i-\mu_k\|^2$.</li>
+<li><b>Cố định $c$, tối ưu $\mu$ (Update):</b> đạo hàm $J$ theo $\mu_k$ rồi cho bằng 0:</li></ul>
+$$\frac{\partial J}{\partial\mu_k}=-2\sum_{x_i\in C_k}(x_i-\mu_k)=0\;\Rightarrow\;\mu_k=\frac1{|C_k|}\sum_{x_i\in C_k}x_i$$
+<p>Mỗi bước đều làm $J$ giảm hoặc giữ nguyên, mà $J\ge0$ và số cách gán là hữu hạn, nên thuật toán chắc chắn dừng. Nhưng nó chỉ dừng ở <b>cực tiểu cục bộ</b>.</p>
+<h3>3.2 Ví dụ tính tay (K = 2)</h3>
+<p>6 điểm: $x_1=(1,1),\,x_2=(2,1),\,x_3=(1,3),\,x_4=(5,4),\,x_5=(6,5),\,x_6=(7,4)$. Khởi tạo xấu: $\mu_1=(1,1)$, $\mu_2=(2,1)$.</p>
+<p><b>Vòng 1, Assignment</b> (khoảng cách tới $\mu_1$ / $\mu_2$):</p>
+<div class="tw"><table>
+<tr><th>Điểm</th><th>$d_1$</th><th>$d_2$</th><th>Cụm</th></tr>
+<tr><td>$x_1$</td><td>0</td><td>1</td><td>1</td></tr>
+<tr><td>$x_2$</td><td>1</td><td>0</td><td>2</td></tr>
+<tr><td>$x_3$</td><td>2</td><td>2.236</td><td>1</td></tr>
+<tr><td>$x_4$</td><td>5</td><td>4.243</td><td>2</td></tr>
+<tr><td>$x_5$</td><td>6.403</td><td>5.657</td><td>2</td></tr>
+<tr><td>$x_6$</td><td>6.708</td><td>5.831</td><td>2</td></tr>
+</table></div>
+<p>Ví dụ $x_3$: $d_1=\sqrt{0+4}=2$ và $d_2=\sqrt{1+4}=2.236$, nên vào cụm 1. $J=0+0+4+18+32+34=\mathbf{88}$.</p>
+<p><b>Vòng 1, Update:</b> $\mu_1$ = trung bình của $x_1,x_3$ = $(1,\,2)$; $\mu_2$ = trung bình của $x_2,x_4,x_5,x_6$ = $\big(\tfrac{2+5+6+7}{4},\tfrac{1+4+5+4}{4}\big)=(5,\,3.5)$.</p>
+<p><b>Vòng 2:</b> $x_2$ giờ gần $\mu_1$ hơn ($1.414$ so với $3.905$) nên chuyển sang cụm 1. Cụm 1 = {$x_1,x_2,x_3$}, cụm 2 = {$x_4,x_5,x_6$}, $J=\mathbf{11.75}$. Update cho $\mu_1=(1.333,\,1.667)$ và $\mu_2=(6,\,4.333)$.</p>
+<p><b>Vòng 3:</b> không điểm nào đổi cụm, $J=\mathbf{6.0}$, dừng.</p>
+<h3>3.3 Vì sao Euclid bình phương, và khoảng cách nào đi với tâm nào</h3>
+<p>Update dùng <i>trung bình</i> chính vì $J$ dùng bình phương Euclid. Đổi sang Manhattan thì điểm tối ưu của cụm là <b>trung vị</b> theo từng chiều (K-medians). Đổi sang cosine thì ta được spherical K-means (chuẩn hoá vector về độ dài 1 rồi lấy trung bình). <b>Loại khoảng cách và cách tính tâm đi cùng nhau.</b></p>
+<h3>3.4 Khởi tạo, chọn K và các điểm cần nhớ</h3>
+<ul>
+<li><b>Khởi tạo:</b> nếu các tâm ban đầu gần nhau, kết quả có thể kém hoặc cần nhiều vòng. Dùng farthest-point hoặc <i>k-means++</i> (chọn tâm mới ngẫu nhiên với xác suất tỉ lệ $d^2$), và chạy nhiều lần lấy $J$ nhỏ nhất.</li>
+<li><b>Chọn K bằng elbow:</b> $J$ luôn giảm khi K tăng (K = N thì $J=0$), nên chọn K ở chỗ $J$ ngừng giảm mạnh. Ngoài ra có silhouette score.</li>
+<li>Cần chuẩn hoá feature. Giả định cụm hình cầu, kích thước gần bằng nhau (cụm hình lưỡi liềm sẽ bị chia sai; dùng DBSCAN hoặc GMM). Nhạy với outlier vì trung bình bị kéo lệch.</li></ul>
+<h3>Hình 3: K-means từng bước</h3>
+<div class="fig"><div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<svg id="s3" viewBox="0 0 320 320" style="width:320px;max-width:100%;flex:0 0 auto;background:var(--surface-1);border-radius:12px"></svg>
+<div style="flex:1;min-width:260px;font-size:13px">
+<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px">
+<select id="ds"><option value="A">Dữ liệu A: 6 điểm, K=2</option><option value="B">Dữ liệu B: 18 điểm</option></select>
+<select id="ini"><option value="bad">Khởi tạo xấu</option><option value="good">Khởi tạo tốt (xa nhau)</option></select></div>
+<div id="krow" style="display:none;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-bottom:8px"><span>K</span><input type="range" id="kk3" min="1" max="6" step="1" value="3"><b id="kv"></b></div>
+<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap"><button id="bs">Bước tiếp</button><button id="ba">Chạy đến hội tụ</button><button id="br">Đặt lại</button></div>
+<div id="st" style="margin-bottom:8px;min-height:38px"></div>
+<table style="width:100%;border-collapse:collapse" id="ct"></table>
+<div id="jh" style="margin:8px 0;color:var(--text-secondary)"></div>
+<div style="margin-top:6px;color:var(--text-secondary)">Elbow: J cuối cùng theo K (khởi tạo tốt)</div>
+<div id="el"></div>
+</div></div></div>
+
+<div class="how"><h4>Cách đọc Hình 3</h4><ul>
+<li><b>Ô vuông có số</b> là các tâm $\mu_k$, mỗi cụm một màu. Điểm tròn xám là chưa được gán. Sau Assignment, điểm đổi màu theo tâm gần nhất và có đường mảnh nối tới tâm.</li>
+<li><b>"Bước tiếp"</b> đi lần lượt Assignment rồi Update; dòng trạng thái cho biết bạn vừa làm gì và bước kế là gì. Sau Update, <b>mũi tên nét đứt</b> nối ô rỗng (tâm cũ) tới ô đặc (tâm mới).</li>
+<li><b>Dữ liệu A, khởi tạo xấu</b> chính là ví dụ tính tay: $J$ qua ba lần Assignment là <b>88 → 11.75 → 6</b>; tâm cuối (1.333, 1.667) và (6, 4.333).</li>
+<li><b>"Khởi tạo tốt"</b> đặt các tâm xa nhau nên hội tụ nhanh hơn. Dữ liệu B có 18 điểm thuộc 3 nhóm; với K = 3 và khởi tạo xấu, cả 3 tâm đầu nằm trong cùng một nhóm nên phải "trôi" một quãng dài.</li>
+<li><b>Bảng bên phải</b> cho tâm và số điểm mỗi cụm. Dòng "J qua các lần Assignment" cho thấy $J$ giảm dần, không bao giờ tăng.</li>
+<li><b>Elbow</b> của dữ liệu B: $J$ giảm rất mạnh từ K = 1 đến K = 3 rồi giảm chậm, nên "khuỷu tay" ở K = 3, đúng số nhóm thật. Kéo slider K để thanh được tô sáng di chuyển theo.</li>
+<li>Thử K = 2 hoặc K = 4 với dữ liệu B: K-means vẫn chạy nhưng nhóm thật bị gộp hoặc bị tách đôi. Thuật toán không biết K "đúng", bạn phải chọn.</li></ul></div>
+</section>
+
+<section id="k4"><h2>Tóm tắt</h2>
+<div class="tw"><table>
+<tr><th></th><th>KNN</th><th>K-means</th></tr>
+<tr><td>Loại</td><td>Supervised (có nhãn)</td><td>Unsupervised (không nhãn)</td></tr>
+<tr><td>Khoảng cách dùng để</td><td>tìm K láng giềng gần q nhất</td><td>gán điểm vào tâm gần nhất</td></tr>
+<tr><td>Đổi loại khoảng cách thì</td><td>đổi hình vùng láng giềng, có thể đổi kết quả</td><td>cần đổi cả cách tính tâm (median, v.v.)</td></tr>
+<tr><td>Chuẩn hoá feature</td><td>bắt buộc</td><td>bắt buộc</td></tr>
+<tr><td>Tham số K</td><td>số láng giềng, chọn bằng cross-validation</td><td>số cụm, chọn bằng elbow / silhouette</td></tr>
+<tr><td>K nhỏ / lớn</td><td>overfit / underfit</td><td>chia quá chi tiết / gộp nhóm thật</td></tr>
+<tr><td>Loss</td><td>không có</td><td>$J=\sum\|x_i-\mu_{c_i}\|^2$</td></tr>
+<tr><td>Rủi ro riêng</td><td>số chiều cao, dự đoán chậm</td><td>khởi tạo xấu, cực tiểu cục bộ</td></tr>
+</table></div>
+</section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script>(function(){
+var S=28,A=[1,2];
+function px(x){return (x+3)*S}function py(y){return (9-y)*S}
+function f(n){return (Math.round(n*1000)/1000).toString()}
+function norm(dx,dy,p){dx=Math.abs(dx);dy=Math.abs(dy);if(p==='inf')return Math.max(dx,dy);return Math.pow(Math.pow(dx,p)+Math.pow(dy,p),1/p)}
+function draw(){
+var bx=+document.getElementById('bx').value,by=+document.getElementById('by').value,r=+document.getElementById('rr').value,pv=+document.getElementById('pp').value,mt=document.getElementById('mt').value;
+document.getElementById('bxv').textContent=bx;document.getElementById('byv').textContent=by;document.getElementById('rrv').textContent=r;document.getElementById('ppv').textContent=pv;
+var p=mt==='inf'?'inf':(mt==='p'?pv:+mt);
+var h='';
+for(var i=-3;i<=9;i++)h+='<line x1="'+px(i)+'" y1="0" x2="'+px(i)+'" y2="308" stroke="var(--border)" stroke-width="0.5"/>';
+for(var j=-2;j<=9;j++)h+='<line x1="0" y1="'+py(j)+'" x2="336" y2="'+py(j)+'" stroke="var(--border)" stroke-width="0.5"/>';
+h+='<line x1="'+px(0)+'" y1="0" x2="'+px(0)+'" y2="308" stroke="var(--border-strong)"/><line x1="0" y1="'+py(0)+'" x2="336" y2="'+py(0)+'" stroke="var(--border-strong)"/>';
+var pts=[];for(var k=0;k<=160;k++){var t=k/160*2*Math.PI,c=Math.cos(t),s=Math.sin(t),n=norm(c,s,p);pts.push(px(A[0]+r*c/n)+','+py(A[1]+r*s/n))}
+h+='<polygon points="'+pts.join(' ')+'" fill="#7F77DD" fill-opacity="0.12" stroke="#7F77DD" stroke-width="1.5"/>';
+h+='<line x1="'+px(0)+'" y1="'+py(0)+'" x2="'+px(A[0])+'" y2="'+py(A[1])+'" stroke="#888780" stroke-dasharray="2 3"/><line x1="'+px(0)+'" y1="'+py(0)+'" x2="'+px(bx)+'" y2="'+py(by)+'" stroke="#888780" stroke-dasharray="2 3"/>';
+h+='<polyline points="'+px(A[0])+','+py(A[1])+' '+px(bx)+','+py(A[1])+' '+px(bx)+','+py(by)+'" fill="none" stroke="#BA7517" stroke-width="2"/>';
+h+='<line x1="'+px(A[0])+'" y1="'+py(A[1])+'" x2="'+px(bx)+'" y2="'+py(by)+'" stroke="#D85A30" stroke-width="2"/>';
+h+='<circle cx="'+px(A[0])+'" cy="'+py(A[1])+'" r="6" fill="#7F77DD"/><text x="'+(px(A[0])-14)+'" y="'+(py(A[1])+16)+'" font-size="12" fill="var(--text-primary)">A</text>';
+h+='<circle cx="'+px(bx)+'" cy="'+py(by)+'" r="6" fill="#1D9E75"/><text x="'+(px(bx)+9)+'" y="'+(py(by)-6)+'" font-size="12" fill="var(--text-primary)">B</text>';
+h+='<text x="'+(px(0)+4)+'" y="'+(py(0)+14)+'" font-size="11" fill="var(--text-secondary)">gốc O</text>';
+document.getElementById('s1').innerHTML=h;
+var dx=Math.abs(A[0]-bx),dy=Math.abs(A[1]-by),e=norm(dx,dy,2),m=norm(dx,dy,1),c=norm(dx,dy,'inf'),mk=norm(dx,dy,pv);
+var na=Math.sqrt(5),nb=Math.sqrt(bx*bx+by*by),cs=nb>0?(A[0]*bx+A[1]*by)/(na*nb):null;
+var th=cs===null?'—':f(Math.acos(Math.max(-1,Math.min(1,cs)))*180/Math.PI)+'°';
+function row(a,b,cl){return '<tr><td style="padding:3px 0;color:'+cl+'">'+a+'</td><td style="text-align:right;font-weight:500">'+b+'</td></tr>'}
+document.getElementById('tb').innerHTML=row('Δx = '+f(dx)+', Δy = '+f(dy),'','var(--text-secondary)')+row('Euclid (đỏ cam)',f(e),'#993C1D')+row('Manhattan (vàng)',f(m),'#854F0B')+row('Chebyshev',f(c),'var(--text-primary)')+row('Minkowski p='+pv,f(mk),'var(--text-primary)')+row('Cosine: cos θ ('+th+')',cs===null?'—':f(cs),'var(--text-primary)')+row('Cosine distance = 1 − cos θ',cs===null?'—':f(1-cs),'var(--text-primary)');
+var ds=norm(dx,dy,p),inn=ds<=r+1e-9;
+document.getElementById('inn').innerHTML='Khoảng cách đang chọn d(A,B) = <b>'+f(ds)+'</b> '+(inn?'≤':'>')+' r = '+r+' → B <b>'+(inn?'nằm trong':'nằm ngoài')+'</b> vùng.';
+}
+['bx','by','rr','pp','mt'].forEach(function(i){document.getElementById(i).addEventListener('input',draw)});draw();
+})();
+(function(){
+var P=[[1,1,'A'],[2,2,'A'],[3,4,'B'],[4,3,'A'],[5,5,'B'],[6,4,'B']],CL={A:'#7F77DD',B:'#D85A30'},U=44;
+function X(x){return x*U}function Y(y){return 308-y*U}
+function f(n){return (Math.round(n*1000)/1000).toString()}
+function dist(m,ax,ay,bx,by){var dx=Math.abs(ax-bx),dy=Math.abs(ay-by);return m==='e'?Math.sqrt(dx*dx+dy*dy):(m==='m'?dx+dy:Math.max(dx,dy))}
+function vote(x,y,K,m,w){
+var o=P.map(function(p,i){return{i:i,d:dist(m,x,y,p[0],p[1]),l:p[2]}}).sort(function(a,b){return a.d-b.d});
+var nb=o.slice(0,K),v={A:0,B:0};nb.forEach(function(n){v[n.l]+=w?1/(n.d+1e-9):1});
+var win=v.A>v.B+1e-9?'A':(v.B>v.A+1e-9?'B':nb[0].l);
+return{o:o,nb:nb,v:v,win:win,tie:Math.abs(v.A-v.B)<=1e-9};
+}
+function shape(cx,cy,r,m){var pts=[];for(var k=0;k<=120;k++){var t=k/120*2*Math.PI,c=Math.cos(t),s=Math.sin(t),n=m==='e'?1:(m==='m'?Math.abs(c)+Math.abs(s):Math.max(Math.abs(c),Math.abs(s)));pts.push(X(cx+r*c/n)+','+Y(cy+r*s/n))}return pts.join(' ')}
+function draw(){
+var qx=+document.getElementById('qx').value,qy=+document.getElementById('qy').value,K=+document.getElementById('kk').value,m=document.getElementById('mt2').value,w=document.getElementById('wt').checked;
+document.getElementById('qxv').textContent=qx;document.getElementById('qyv').textContent=qy;document.getElementById('kkv').textContent=K;
+var h='',g=0.25;
+for(var i=0;i<28;i++)for(var j=0;j<28;j++){var cx=(i+.5)*g,cy=(j+.5)*g,r=vote(cx,cy,K,m,w);h+='<rect x="'+X(i*g)+'" y="'+Y((j+1)*g)+'" width="'+(g*U+.5)+'" height="'+(g*U+.5)+'" fill="'+CL[r.win]+'" fill-opacity="0.13"/>'}
+var R=vote(qx,qy,K,m,w);
+var rK=R.nb[K-1].d;
+h+='<polygon points="'+shape(qx,qy,rK,m)+'" fill="none" stroke="var(--text-secondary)" stroke-dasharray="4 3"/>';
+R.nb.forEach(function(n){var p=P[n.i];h+='<line x1="'+X(qx)+'" y1="'+Y(qy)+'" x2="'+X(p[0])+'" y2="'+Y(p[1])+'" stroke="'+CL[n.l]+'" stroke-width="1.5"/>'});
+P.forEach(function(p,i){var inn=R.nb.some(function(n){return n.i===i});h+='<circle cx="'+X(p[0])+'" cy="'+Y(p[1])+'" r="'+(inn?8:6)+'" fill="'+CL[p[2]]+'" stroke="'+(inn?'var(--text-primary)':'none')+'" stroke-width="1.5"/><text x="'+(X(p[0])+9)+'" y="'+(Y(p[1])-8)+'" font-size="11" fill="var(--text-secondary)">#'+(i+1)+'</text>'});
+h+='<circle cx="'+X(qx)+'" cy="'+Y(qy)+'" r="7" fill="var(--surface-2)" stroke="'+CL[R.win]+'" stroke-width="3"/><text x="'+(X(qx)+10)+'" y="'+(Y(qy)+16)+'" font-size="12" font-weight="500" fill="var(--text-primary)">q</text>';
+document.getElementById('s2').innerHTML=h;
+var t='<tr style="color:var(--text-secondary)"><td>Hạng</td><td>Điểm</td><td>Nhãn</td><td style="text-align:right">d</td><td style="text-align:right">'+(w?'1/d':'phiếu')+'</td></tr>';
+R.o.forEach(function(n,k){var inn=k<K;t+='<tr style="'+(inn?'font-weight:500':'color:var(--text-muted)')+'"><td>'+(k+1)+'</td><td>#'+(n.i+1)+' ('+P[n.i][0]+','+P[n.i][1]+')</td><td style="color:'+(inn?CL[n.l]:'inherit')+'">'+n.l+'</td><td style="text-align:right">'+f(n.d)+'</td><td style="text-align:right">'+(inn?(w?f(1/(n.d+1e-9)):'1'):'—')+'</td></tr>'});
+document.getElementById('tb2').innerHTML=t;
+document.getElementById('res').innerHTML='Tổng: A = <b>'+f(R.v.A)+'</b>, B = <b>'+f(R.v.B)+'</b> → dự đoán <b style="color:'+CL[R.win]+'">'+R.win+'</b>'+(R.tie?' (hòa, lấy nhãn của điểm gần nhất)':'');
+}
+['qx','qy','kk','mt2','wt'].forEach(function(i){document.getElementById(i).addEventListener('input',draw)});draw();
+})();
+(function(){
+var offs=[[0,0],[.6,.3],[-.5,.5],[.3,-.6],[-.4,-.3],[.7,-.2]],ctr=[[1.5,1.5],[5.5,1.8],[3.5,5.5]],DB=[];
+ctr.forEach(function(c){offs.forEach(function(o){DB.push([c[0]+o[0],c[1]+o[1]])})});
+var DA=[[1,1],[2,1],[1,3],[5,4],[6,5],[7,4]],COL=['#7F77DD','#1D9E75','#D85A30','#378ADD','#BA7517','#D4537E'],U=40;
+function X(x){return x*U}function Y(y){return 320-y*U}
+function f(n){return (Math.round(n*1000)/1000).toString()}
+function d2(a,b){return (a[0]-b[0])*(a[0]-b[0])+(a[1]-b[1])*(a[1]-b[1])}
+function nearest(p,C){var b=0,bd=1e9;C.forEach(function(c,k){var d=d2(p,c);if(d<bd-1e-12){bd=d;b=k}});return b}
+function farthest(D,K){var C=[D[0].slice()];while(C.length<K){var bi=0,bv=-1;D.forEach(function(p,i){var m=Math.min.apply(null,C.map(function(c){return d2(p,c)}));if(m>bv+1e-12){bv=m;bi=i}});C.push(D[bi].slice())}return C}
+function Jof(D,C,a){var s=0;D.forEach(function(p,i){s+=d2(p,C[a[i]])});return s}
+function upd(D,C,a){return C.map(function(c,k){var s=[0,0],n=0;D.forEach(function(p,i){if(a[i]===k){s[0]+=p[0];s[1]+=p[1];n++}});return n?[s[0]/n,s[1]/n]:c.slice()})}
+function runAll(D,C0){var C=C0.map(function(c){return c.slice()}),a=null;for(var t=0;t<100;t++){var na=D.map(function(p){return nearest(p,C)});if(a&&na.every(function(v,i){return v===a[i]}))break;a=na;C=upd(D,C,a)}return Jof(D,C,a)}
+var D,K,C,prev,asg,phase,iter,done,Jh;
+function reset(){
+var ds=document.getElementById('ds').value,ini=document.getElementById('ini').value;
+D=ds==='A'?DA:DB;K=ds==='A'?2:+document.getElementById('kk3').value;
+document.getElementById('krow').style.display=ds==='A'?'none':'grid';document.getElementById('kv').textContent=K;
+if(ini==='good')C=farthest(D,K);else C=ds==='A'?[[1,1],[2,1]]:D.slice(0,K).map(function(p){return p.slice()});
+prev=null;asg=null;phase=0;iter=0;done=false;Jh=[];draw()}
+function step(){
+if(done)return;
+if(phase===0){var na=D.map(function(p){return nearest(p,C)}),ch=!asg||na.some(function(v,i){return v!==asg[i]});asg=na;iter++;Jh.push(Jof(D,C,asg));phase=1;if(!ch)done=true}
+else{prev=C.map(function(c){return c.slice()});C=upd(D,C,asg);phase=0}
+draw()}
+function all(){var g=0;while(!done&&g<200){step();g++}}
+function draw(){
+var h='';for(var i=0;i<=8;i++)h+='<line x1="'+X(i)+'" y1="0" x2="'+X(i)+'" y2="320" stroke="var(--border)" stroke-width="0.5"/><line x1="0" y1="'+Y(i)+'" x2="320" y2="'+Y(i)+'" stroke="var(--border)" stroke-width="0.5"/>';
+if(asg&&phase===1)D.forEach(function(p,i){var c=C[asg[i]];h+='<line x1="'+X(p[0])+'" y1="'+Y(p[1])+'" x2="'+X(c[0])+'" y2="'+Y(c[1])+'" stroke="'+COL[asg[i]]+'" stroke-opacity="0.45"/>'});
+if(prev&&phase===0)C.forEach(function(c,k){var o=prev[k];h+='<line x1="'+X(o[0])+'" y1="'+Y(o[1])+'" x2="'+X(c[0])+'" y2="'+Y(c[1])+'" stroke="'+COL[k]+'" stroke-dasharray="3 3" stroke-width="1.5"/><rect x="'+(X(o[0])-5)+'" y="'+(Y(o[1])-5)+'" width="10" height="10" fill="none" stroke="'+COL[k]+'"/>'});
+D.forEach(function(p,i){h+='<circle cx="'+X(p[0])+'" cy="'+Y(p[1])+'" r="5" fill="'+(asg?COL[asg[i]]:'#888780')+'" fill-opacity="'+(asg?1:0.7)+'"/>'});
+C.forEach(function(c,k){h+='<rect x="'+(X(c[0])-8)+'" y="'+(Y(c[1])-8)+'" width="16" height="16" rx="2" fill="'+COL[k]+'" stroke="var(--text-primary)" stroke-width="2"/><text x="'+(X(c[0])-3.5)+'" y="'+(Y(c[1])+4)+'" font-size="11" fill="#fff" font-weight="500">'+(k+1)+'</text>'});
+document.getElementById('s3').innerHTML=h;
+var msg;
+if(done)msg='<b>Hội tụ</b> sau '+iter+' lần Assignment: không điểm nào đổi cụm nữa. J = <b>'+f(Jh[Jh.length-1])+'</b>.';
+else if(phase===0&&!asg)msg='Đã đặt '+K+' tâm ban đầu (ô vuông). Bước tiếp: <b>Assignment</b>, gán mỗi điểm vào tâm gần nhất.';
+else if(phase===1)msg='Vừa <b>Assignment</b> xong: màu điểm theo tâm gần nhất, J = <b>'+f(Jh[Jh.length-1])+'</b>. Bước tiếp: <b>Update</b>, dời mỗi tâm về trung bình cụm.';
+else msg='Vừa <b>Update</b> xong: tâm dời theo mũi tên nét đứt (ô rỗng là vị trí cũ). Bước tiếp: <b>Assignment</b> lại.';
+document.getElementById('st').innerHTML=msg;
+var t='<tr style="color:var(--text-secondary)"><td>Cụm</td><td>Tâm μ</td><td style="text-align:right">Số điểm</td></tr>';
+C.forEach(function(c,k){var n=asg?asg.filter(function(v){return v===k}).length:'—';t+='<tr><td style="color:'+COL[k]+';font-weight:500">'+(k+1)+'</td><td>('+f(c[0])+', '+f(c[1])+')</td><td style="text-align:right">'+n+'</td></tr>'});
+document.getElementById('ct').innerHTML=t;
+document.getElementById('jh').textContent=Jh.length?'J qua các lần Assignment: '+Jh.map(f).join(' → '):'';
+var kmax=document.getElementById('ds').value==='A'?5:6,E=[],mx=0;
+for(var k=1;k<=kmax;k++){var j=runAll(D,farthest(D,k));E.push(j);mx=Math.max(mx,j)}
+var e='';E.forEach(function(j,i){var cur=(i+1)===K;e+='<div style="display:flex;align-items:center;gap:8px;margin:2px 0"><span style="width:34px;'+(cur?'font-weight:500':'color:var(--text-secondary)')+'">K='+(i+1)+'</span><div style="height:12px;width:'+Math.max(2,j/mx*150)+'px;background:'+(cur?'#7F77DD':'var(--border-strong)')+'"></div><span style="color:var(--text-secondary)">'+f(j)+'</span></div>'});
+document.getElementById('el').innerHTML=e}
+document.getElementById('bs').onclick=step;document.getElementById('ba').onclick=all;document.getElementById('br').onclick=reset;
+['ds','ini','kk3'].forEach(function(i){document.getElementById(i).addEventListener('input',reset)});reset();
+})();
+</script>
+</body>
+</html>

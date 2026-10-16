@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNN: từ convolution đến backpropagation</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+
+.g{display:grid;gap:2px}
+.pc{width:36px;height:32px;display:flex;align-items:center;justify-content:center;font-size:12px;border-radius:4px;box-sizing:border-box;color:#222}
+.pc.hl{outline:2px solid #ef9f27;outline-offset:-1px}
+.grids{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;margin-bottom:8px}
+.capt{font-size:12px;color:var(--muted);margin:4px 0}
+.res{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:14px}
+.btns button.on{background:var(--accent-bg);border-color:transparent}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>CNN (Convolutional Neural Network)</h1><p>Kernel trượt qua ảnh, feature map, pooling và gradient của kernel, kèm 2 hình tương tác và cách đọc từng hình.</p></div></header>
+<nav><div class="wrap"><a href="#s1">1. Vì sao CNN</a><a href="#s2">2. Ảnh là số</a><a href="#s3">3. Convolution</a><a href="#s4">4. ReLU, pooling</a><a href="#s5">5. Cả mạng</a><a href="#s6">6. Backprop</a><a href="#s7">7. Thực tế</a><a href="#s9">9. Tóm tắt</a></div></nav>
+<main class="wrap">
+<section id="s1"><h2>1. Vì sao cần CNN? (Convolutional Neural Network, mạng nơ-ron tích chập)</h2>
+<p>Ở phần trước, mạng nhận một vector số. Với <b>ảnh</b>, ta có thể "duỗi" các điểm ảnh (pixel) thành vector rồi đưa vào mạng thường (fully connected, hay dense). Cách này có 2 vấn đề:</p>
+<p><b>Vấn đề 1: quá nhiều tham số.</b> Ảnh xám 28×28 có $28\times28=784$ pixel. Ảnh màu 224×224 có $224\times224\times3=150{,}528$ số. Nếu lớp ẩn đầu tiên có 1000 neuron thì chỉ lớp đó đã có $150{,}528\times1000\approx$ <b>150 triệu weight</b>. Quá nhiều để học và rất dễ overfitting.</p>
+<p><b>Vấn đề 2: mất cấu trúc không gian.</b> Khi duỗi ảnh, hai pixel nằm cạnh nhau không còn khác gì hai pixel ở hai góc ảnh. Mạng phải học lại từ đầu rằng "vạch đứng ở góc trái" và "vạch đứng ở góc phải" là cùng một thứ.</p>
+<p>CNN giải quyết bằng 2 ý tưởng:</p>
+<div class="tw"><table>
+<tr><th>Ý tưởng</th><th>Nghĩa</th><th>Lợi ích</th></tr>
+<tr><td><b>Kết nối cục bộ</b> (local connectivity)</td><td>Mỗi neuron chỉ nhìn một ô nhỏ (ví dụ 3×3), không nhìn cả ảnh</td><td>Ít weight hơn, vì pixel gần nhau mới liên quan nhau</td></tr>
+<tr><td><b>Chia sẻ weight</b> (weight sharing)</td><td>Cùng một bộ weight (gọi là kernel hay filter) được "trượt" qua mọi vị trí của ảnh</td><td>Học một lần dùng mọi nơi: vạch đứng ở đâu cũng bị phát hiện</td></tr>
+</table></div></section>
+
+<section id="s2"><h2>2. Ảnh thực chất là ma trận số</h2>
+<p>Ảnh xám là một ma trận, mỗi ô là độ sáng (0 là đen, 1 là trắng). Ảnh màu có 3 ma trận (đỏ, xanh lá, xanh dương). Ví dụ ảnh 5×5 có một vạch đứng ở cột giữa:</p>
+$$X=\begin{pmatrix}0&0&1&0&0\\0&0&1&0&0\\0&0&1&0&0\\0&0&1&0&0\\0&0&1&0&0\end{pmatrix}$$</section>
+
+<section id="s3"><h2>3. Phép tích chập (convolution)</h2>
+<p>Kernel là một ma trận nhỏ, ví dụ 3×3. Ta đặt nó lên một ô 3×3 của ảnh, <b>nhân từng cặp số tương ứng rồi cộng lại</b>, được 1 con số. Sau đó trượt sang vị trí kế tiếp. Công thức cho đầu ra tại vị trí $(i,j)$:</p>
+$$\text{out}[i,j]=\sum_{m=0}^{F-1}\sum_{n=0}^{F-1}K[m,n]\cdot X[i+m,\,j+n]+b$$
+<p>($F$ là kích thước kernel, $b$ là bias.) Đây chính là $z=\sum w_ix_i+b$ của một neuron, chỉ khác là $x$ lấy từ một ô nhỏ của ảnh và $w$ là <b>cùng một bộ</b> cho mọi vị trí.</p>
+<p><b>Ví dụ:</b> kernel "phát hiện vạch đứng" (giữa dương, hai bên âm):</p>
+$$K=\begin{pmatrix}-1&2&-1\\-1&2&-1\\-1&2&-1\end{pmatrix},\quad b=0$$
+<p>Tính tại 2 vị trí của ảnh $X$ ở trên:</p>
+<div class="tw"><table>
+<tr><th>Vị trí</th><th>Ô 3×3 của ảnh (theo hàng)</th><th>Nhân từng cặp, theo hàng</th><th>Cộng</th></tr>
+<tr><td>Trái nhất (cột 0–2)</td><td>(0,0,1), (0,0,1), (0,0,1)</td><td>mỗi hàng: $0\cdot(-1)+0\cdot2+1\cdot(-1)=-1$</td><td>$-1-1-1=\mathbf{-3}$</td></tr>
+<tr><td>Giữa (cột 1–3)</td><td>(0,1,0), (0,1,0), (0,1,0)</td><td>mỗi hàng: $0\cdot(-1)+1\cdot2+0\cdot(-1)=2$</td><td>$2+2+2=\mathbf{6}$</td></tr>
+</table></div>
+<p>Làm cho cả 9 vị trí, ta được ma trận đầu ra 3×3 gọi là <b>feature map</b> (bản đồ đặc trưng), mỗi hàng là $(-3,\ 6,\ -3)$. Số lớn (6) xuất hiện đúng chỗ có vạch đứng.</p>
+<div class="derive"><span class="tag">SUY RA</span>
+<p><b>Kích thước đầu ra.</b> Ảnh $N\times N$, kernel $F\times F$, trượt mỗi lần $S$ ô (stride), có thể thêm $P$ viền 0 quanh ảnh (padding):</p>
+$$\text{out size}=\Big\lfloor\frac{N-F+2P}{S}\Big\rfloor+1$$
+<p>Kernel chỉ đặt được ở các vị trí góc trên-trái từ $0$ đến $N-F$ (nếu không sẽ tràn ra ngoài ảnh), tức $N-F+1$ vị trí khi $S=1$, $P=0$. Ở ví dụ trên: $5-3+1=3$. Padding thêm $2P$ pixel vào chiều rộng, stride $S$ làm thưa các vị trí đi $S$ lần.</p></div>
+<p><b>Hình 1</b> cho bạn tự chọn ảnh, chọn kernel và xem từng bước nhân-cộng.</p>
+<div class="widget"><h4>Hình 1: Convolution từng bước</h4>
+<div class="capt">1) Chọn ảnh 6×6 (hoặc bấm vào từng ô để bật/tắt pixel):</div>
+<div class="btns" id="imb"></div>
+<div class="capt">2) Chọn kernel 3×3:</div>
+<div class="btns" id="kb"></div>
+<div class="ctrl"><div><label>Hàng i = <b id="iv">0</b></label><input type="range" id="i" min="0" max="3" step="1" value="0"></div>
+<div><label>Cột j = <b id="jv">1</b></label><input type="range" id="j" min="0" max="3" step="1" value="1"></div></div>
+<label style="font-size:14px"><input type="checkbox" id="relu" checked> Bật ReLU</label>
+<div class="grids" style="margin-top:10px">
+<div><div class="capt">Ảnh X (khung cam = ô 3×3 đang xét)</div><div class="g" id="gx"></div></div>
+<div><div class="capt">Kernel K</div><div class="g" id="gk"></div></div>
+<div><div class="capt">K × X từng cặp</div><div class="g" id="gp"></div></div></div>
+<div class="res" id="res"></div>
+<div class="grids">
+<div><div class="capt">Feature map 4×4 (sau ReLU nếu bật)</div><div class="g" id="gf"></div></div>
+<div><div class="capt">Max pooling 2×2 → còn 2×2</div><div class="g" id="gm"></div></div></div></div>
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li><b>Ba lưới đầu:</b> lưới trái là ảnh 6×6 (ô đen = 0, ô trắng = 1, khung cam là ô 3×3 đang xét), lưới giữa là kernel (xanh = weight dương, đỏ = âm), lưới phải là kết quả nhân từng cặp. Dòng bên dưới cộng 9 số lại, đó chính là một ô của feature map.</li>
+<li><b>Cách đọc:</b> chọn ảnh "Vạch đứng" + kernel "Vạch đứng", kéo cột $j$ từ 0 đến 3 (giữ $i$ bất kỳ): $j=0$ vạch nằm sát mép phải của ô 3×3, tổng = <b>−3</b> (đúng tính tay ở mục 3); $j=1$ vạch nằm đúng giữa, tổng = <b>6</b> (đúng tính tay); $j=2$ vạch ở mép trái, tổng = −3; $j=3$ không có vạch, tổng = 0.</li>
+<li><b>Feature map 4×4</b> vì thế có mỗi hàng là $(0,\ 6,\ 0,\ 0)$ sau ReLU. Số lớn nằm đúng cột có vạch.</li>
+<li><b>Đổi sang ảnh "Vạch ngang" mà giữ kernel "Vạch đứng":</b> toàn bộ feature map bằng 0, vì mỗi hàng của vạch ngang cho $-1+2-1=0$. Đổi kernel sang "Vạch ngang" thì feature map lại sáng lên. Mỗi kernel là một <b>bộ phát hiện một kiểu mẫu</b>.</li>
+<li><b>Kernel "Cạnh trái→phải"</b> trên vạch đứng: cho $+3$ khi vạch ở mép phải ô 3×3, $-3$ khi ở mép trái (dò biên). <b>Kernel "Làm mờ"</b> chỉ lấy trung bình 9 pixel.</li>
+<li>Bạn có thể bấm vào ô của ảnh để tự vẽ, hoặc bỏ tick ReLU để xem số âm.</li></ul></div></section>
+
+<section id="s4"><h2>4. ReLU và pooling</h2>
+<p><b>ReLU</b> đã học ở phần trước: $a=\max(0,z)$. Ở đây nó giữ lại chỗ "kernel có phát hiện thấy" ($z>0$) và xóa chỗ không thấy. Đạo hàm là 1 nếu $z>0$, ngược lại 0.</p>
+<p><b>Max pooling 2×2</b> chia feature map thành các khối 2×2 không chồng nhau và lấy <b>giá trị lớn nhất</b> của mỗi khối. Feature map 4×4 thành 2×2 (như lưới "Max pooling" trong Hình 1). Với ví dụ vạch đứng: các hàng $(0,6,0,0)$ cho kết quả $\begin{pmatrix}6&0\\6&0\end{pmatrix}$.</p>
+<ul>
+<li>Pooling <b>không có tham số</b> để học.</li>
+<li>Nó làm ảnh nhỏ đi một nửa (đỡ tính toán) và giúp mạng không quá nhạy với việc vạch dịch đi 1 pixel: miễn là vạch còn nằm trong khối, kết quả vẫn là 6.</li>
+<li>Khi backprop: gradient chỉ đi về vị trí <b>lớn nhất</b> của khối (các ô còn lại không ảnh hưởng đến kết quả nên gradient bằng 0).</li></ul></section>
+
+<section id="s5"><h2>5. Cả mạng CNN và vì sao ít tham số hơn</h2>
+<p>Một CNN điển hình: <b>Ảnh → [Conv → ReLU → Pool] lặp vài lần → Flatten (duỗi thành vector) → Dense → Sigmoid/Softmax.</b> Các tầng đầu học mẫu đơn giản (cạnh, vạch), các tầng sau ghép chúng thành mẫu phức tạp hơn (góc, hình, vật thể).</p>
+<p>Nếu ảnh có nhiều kênh (3 kênh màu), mỗi kernel có kích thước $F\times F\times C_{\text{in}}$. Một lớp tích chập có $C_{\text{out}}$ kernel thì số tham số là $C_{\text{out}}\,(F^2C_{\text{in}}+1)$.</p>
+<p><b>So sánh với ảnh MNIST 28×28 (xám):</b></p>
+<div class="tw"><table>
+<tr><th>Cách làm</th><th>Số tham số lớp đầu</th></tr>
+<tr><td>8 kernel 3×3 (Conv) → ra $8\times26\times26=5408$ số</td><td>$8\times(9+1)=\mathbf{80}$</td></tr>
+<tr><td>Lớp dense tạo ra cùng 5408 số từ 784 pixel</td><td>$784\times5408+5408=\mathbf{4{,}245{,}280}$</td></tr>
+</table></div>
+<p>Chỉ riêng lớp đầu, CNN ít hơn khoảng <b>53 nghìn lần</b>. Sau pooling còn $8\times13\times13=1352$ số, nối với 10 neuron ra (10 chữ số) chỉ thêm $1352\times10+10=13{,}530$ tham số.</p></section>
+
+<section id="s6"><h2>6. Backpropagation qua lớp tích chập</h2>
+<div class="derive"><span class="tag">SUY RA</span>
+<p>Vẫn là chain rule như phần Neural Network. Điều mới là <b>weight được dùng chung nhiều lần</b>. Gọi $\delta[i,j]=\partial L/\partial z[i,j]$ (sai số tại mỗi ô của feature map, sau khi đã qua dense và ReLU). Vì $z[i,j]=\sum K[m,n]X[i+m,j+n]+b$ nên mỗi $K[m,n]$ xuất hiện trong <b>mọi</b> ô $z[i,j]$:</p>
+$$\frac{\partial L}{\partial K[m,n]}=\sum_{i,j}\frac{\partial L}{\partial z[i,j]}\cdot\frac{\partial z[i,j]}{\partial K[m,n]}=\sum_{i,j}\delta[i,j]\cdot X[i+m,\,j+n],\qquad \frac{\partial L}{\partial b}=\sum_{i,j}\delta[i,j]$$
+<p>Nghĩa là gradient của một weight kernel = <b>cộng dồn</b> (δ tại mỗi vị trí) × (pixel mà weight đó đã nhân tại vị trí đó).</p></div>
+<p><b>Ví dụ tính tay.</b> Ảnh 3×3, kernel 2×2, rồi ReLU, duỗi 4 số, dense 4→1 sigmoid. Nhãn $y=1$.</p>
+$$X=\begin{pmatrix}1&0&1\\0&1&1\\1&1&0\end{pmatrix},\ K=\begin{pmatrix}0.5&-0.5\\0.2&0.4\end{pmatrix},\ b=-0.15,\ w=(0.5,-0.3,0.8,0.2),\ c=0$$
+<p><b>Forward</b> (feature map 2×2 có 4 vị trí):</p>
+<div class="tw"><table>
+<tr><th>Vị trí $(i,j)$</th><th>Tích từng cặp (K × ô 2×2)</th><th>$z$</th><th>$a=\text{ReLU}(z)$</th></tr>
+<tr><td>(0,0)</td><td>$0.5\cdot1-0.5\cdot0+0.2\cdot0+0.4\cdot1=0.9$, trừ 0.15</td><td>0.75</td><td><b>0.75</b></td></tr>
+<tr><td>(0,1)</td><td>$0.5\cdot0-0.5\cdot1+0.2\cdot1+0.4\cdot1=0.1$, trừ 0.15</td><td>−0.05</td><td><b>0</b></td></tr>
+<tr><td>(1,0)</td><td>$0.5\cdot0-0.5\cdot1+0.2\cdot1+0.4\cdot1=0.1$, trừ 0.15</td><td>−0.05</td><td><b>0</b></td></tr>
+<tr><td>(1,1)</td><td>$0.5\cdot1-0.5\cdot1+0.2\cdot1+0.4\cdot0=0.2$, trừ 0.15</td><td>0.05</td><td><b>0.05</b></td></tr>
+</table></div>
+<p>Dense: $z_{\text{out}}=0.5\cdot0.75-0.3\cdot0+0.8\cdot0+0.2\cdot0.05=0.385$, $p=\sigma(0.385)=\mathbf{0.595}$, $L=-\ln0.595=\mathbf{0.519}$.</p>
+<p><b>Backward:</b></p>
+<div class="tw"><table>
+<tr><th>Đại lượng</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>$\delta_{\text{out}}=p-y$</td><td>$0.595-1$</td><td>−0.405</td></tr>
+<tr><td>$\delta_a=\delta_{\text{out}}\cdot w$</td><td>$-0.405\times(0.5,-0.3,0.8,0.2)$</td><td>(−0.2025, +0.1215, −0.3239, −0.0810)</td></tr>
+<tr><td>$\delta_z=\delta_a\cdot\mathbb 1[z>0]$</td><td>ReLU chặn 2 vị trí có $z<0$</td><td>(−0.2025, <b>0</b>, <b>0</b>, −0.0810)</td></tr>
+</table></div>
+<p>(Hai vị trí bị ReLU chặn cho gradient 0, nên dense weight 2 và 3 cũng không đổi lần này.)</p>
+<p>Gradient của kernel, theo công thức ở trên (chỉ vị trí (0,0) và (1,1) có $\delta\neq0$):</p>
+<div class="tw"><table>
+<tr><th>Weight</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>$\partial L/\partial K[0,0]$</td><td>$\delta(0,0)\cdot X[0,0]+\delta(1,1)\cdot X[1,1]=-0.2025\cdot1-0.0810\cdot1$</td><td><b>−0.2834</b></td></tr>
+<tr><td>$\partial L/\partial K[0,1]$</td><td>$-0.2025\cdot X[0,1]-0.0810\cdot X[1,2]=-0.2025\cdot0-0.0810\cdot1$</td><td>−0.0810</td></tr>
+<tr><td>$\partial L/\partial K[1,0]$</td><td>$-0.2025\cdot X[1,0]-0.0810\cdot X[2,1]=0-0.0810\cdot1$</td><td>−0.0810</td></tr>
+<tr><td>$\partial L/\partial K[1,1]$</td><td>$-0.2025\cdot X[1,1]-0.0810\cdot X[2,2]=-0.2025\cdot1-0$</td><td>−0.2025</td></tr>
+<tr><td>$\partial L/\partial b$</td><td>$-0.2025-0.0810$</td><td>−0.2834</td></tr>
+</table></div>
+<p>(Kiểm tra bằng cách đo $L$ khi tăng $K[0,0]$ một chút: ra −0.2834, khớp.)</p>
+<p><b>Cập nhật với $\alpha=0.5$</b>, ví dụ $K[0,0]\leftarrow0.5-0.5\times(-0.2834)=0.642$:</p>
+$$K=\begin{pmatrix}0.642&-0.460\\0.240&0.501\end{pmatrix},\quad b=-0.008,\quad w=(0.652,-0.3,0.8,0.210),\quad c=0.202$$
+<p>Forward lại: $p=0.762$ (từ 0.595), $L=\mathbf{0.271}$ (từ 0.519). Kernel đã "học" để phản ứng mạnh hơn với ảnh này.</p>
+<p><b>Hình 2</b> là một CNN thật nhỏ tự học phân biệt <b>vạch ngang</b> (nhãn 1) và <b>vạch đứng</b> (nhãn 0) trên ảnh 6×6 có nhiễu: 2 kernel 3×3, ReLU, lấy giá trị lớn nhất của cả feature map (global max pooling), rồi dense 2→1 sigmoid, tổng 23 tham số. Kéo thanh trượt epoch để xem <b>kernel tự học thành bộ phát hiện</b> như thế nào.</p>
+<div class="widget"><h4>Hình 2: CNN nhỏ học kernel qua từng epoch</h4>
+<div class="ctrl"><div><label>Epoch = <b id="ev">0</b></label><input type="range" id="e" min="0" max="300" step="1" value="0"></div></div>
+<div class="btns"><button id="play">▶ Chạy tự động</button></div>
+<div class="metrics"><div class="metric"><div class="l">Epoch</div><div class="v" id="m0">0</div></div><div class="metric"><div class="l">Loss J</div><div class="v" id="m1">-</div></div><div class="metric"><div class="l">Đúng / 16 ảnh</div><div class="v" id="m2">-</div></div></div>
+<div class="capt">Kernel đang học (xanh = weight dương, đỏ = âm):</div>
+<div class="grids"><div><div class="capt" id="k0t"></div><div class="g" id="k0"></div></div><div><div class="capt" id="k1t"></div><div class="g" id="k1"></div></div>
+<div class="res" id="oth" style="align-self:center"></div></div>
+<div class="btns"><span class="capt" style="margin:0 8px 0 0">Xem một ảnh:</span><button id="sa0" class="on">Ảnh vạch ĐỨNG (nhãn 0)</button><button id="sa1">Ảnh vạch NGANG (nhãn 1)</button></div>
+<div class="grids" style="margin-top:10px">
+<div><div class="capt">Ảnh 6×6</div><div class="g" id="gx2"></div></div>
+<div><div class="capt">Feature map kernel 1 (sau ReLU)</div><div class="g" id="f0"></div></div>
+<div><div class="capt">Feature map kernel 2 (sau ReLU)</div><div class="g" id="f1"></div></div></div>
+<div class="res" id="pr"></div>
+<div class="chart" style="height:200px"><canvas id="cl"></canvas></div></div>
+<div class="how"><h4>Cách đọc Hình 2</h4><ul>
+<li><b>Khu trên:</b> hai ô 3×3 là hai kernel đang học, kèm bias và các weight dense $v_1,v_2,c$. Khu giữa cho bạn chọn xem một ảnh vạch đứng hoặc vạch ngang, và hai feature map (sau ReLU) mà hai kernel tạo ra. Dòng bên dưới là giá trị lớn nhất của mỗi map, rồi $z$ và xác suất $p$ (nhãn 1 = vạch ngang).</li>
+<li><b>Epoch 0:</b> kernel là số ngẫu nhiên nhỏ, $J\approx0.704$ (đoán mò), mới đúng <b>2/16</b> ảnh.</li>
+<li><b>Kéo dần epoch:</b> epoch 10: $J\approx0.203$, đã đúng <b>16/16</b>. Epoch 30: $J\approx0.022$. Epoch 100: $J\approx0.004$. Epoch 300: $J\approx0.001$.</li>
+<li><b>Kernel tự thành bộ phát hiện</b> (không ai viết tay các số này): kernel 1 ở epoch 300 có hàng giữa dương (khoảng 1.74, 1.51, 1.25), hàng trên và hàng dưới âm (khoảng −0.7 đến −0.9). Đó là <b>bộ phát hiện vạch ngang</b>, giống kernel "Vạch ngang" ở Hình 1, và $v_1\approx+3.07$ dương nên khi nó sáng lên thì $p$ tăng. Kernel 2 có cột trái dương (khoảng 0.6 đến 0.8), cột phải âm: nó phản ứng với <b>cạnh dọc</b>, và $v_2\approx-1.9$ âm nên khi nó sáng lên thì $p$ giảm.</li>
+<li><b>Bấm "Ảnh vạch ĐỨNG" rồi "Ảnh vạch NGANG" ở epoch 300:</b> với ảnh vạch ngang, feature map của kernel 1 sáng rõ; với ảnh vạch đứng thì feature map của kernel 1 gần như tối và kernel 2 sáng. $p$ vì thế gần 1 cho ảnh ngang và gần 0 cho ảnh đứng.</li>
+<li>Thứ tự học có thể khác nếu khởi tạo khác (thử 8 lần khởi tạo đều đạt 16/16 sau 300 epoch, nhưng kernel nào thành "ngang", kernel nào thành "dọc" thì thay đổi theo lần khởi tạo).</li></ul></div></section>
+
+<section id="s7"><h2>7. Từ bài toán thực tế đến CNN</h2>
+<p>Ví dụ nhận diện <b>chữ số viết tay</b> (bộ dữ liệu MNIST):</p>
+<div class="tw"><table>
+<tr><th>Việc cần làm</th><th>Cách làm</th></tr>
+<tr><td>Đầu vào</td><td>Ảnh 28×28 xám, chia mỗi pixel cho 255 để về khoảng 0–1</td></tr>
+<tr><td>Nhãn</td><td>Chữ số 0–9, mã hóa thành vector 10 chiều (one-hot), ví dụ số 3 là (0,0,0,1,0,0,0,0,0,0)</td></tr>
+<tr><td>Đầu ra</td><td>10 neuron, dùng <b>softmax</b> biến 10 số thành 10 xác suất cộng lại bằng 1</td></tr>
+<tr><td>Loss</td><td>Cross-entropy (mở rộng của log loss cho nhiều lớp)</td></tr>
+<tr><td>Kiến trúc mẫu</td><td>Conv 3×3 (8 kernel) → ReLU → Pool 2×2 → Conv → ReLU → Pool → Flatten → Dense 10</td></tr>
+<tr><td>Huấn luyện</td><td>Backprop và Gradient Descent y hệt phần trước (thường dùng mini-batch)</td></tr>
+</table></div>
+<p>Các lựa chọn thiết kế (hyperparameters) riêng của CNN:</p>
+<div class="tw"><table>
+<tr><th>Tham số</th><th>Ý nghĩa</th><th>Lưu ý</th></tr>
+<tr><td>Kích thước kernel $F$</td><td>Mỗi neuron "nhìn" ô bao lớn</td><td>3×3 phổ biến nhất</td></tr>
+<tr><td>Số kernel $C_{\text{out}}$</td><td>Số kiểu mẫu mỗi lớp học được</td><td>Nhiều hơn thì mạnh hơn nhưng tốn tham số</td></tr>
+<tr><td>Stride $S$</td><td>Mỗi lần trượt bao nhiêu ô</td><td>$S=2$ làm ảnh nhỏ nhanh</td></tr>
+<tr><td>Padding $P$</td><td>Thêm viền 0 quanh ảnh</td><td>Muốn giữ nguyên kích thước thì cần $N-F+2P+1=N$ (với $S=1$), suy ra $P=(F-1)/2$, tức $P=1$ cho kernel 3×3</td></tr>
+<tr><td>Pooling</td><td>Thu nhỏ ảnh</td><td>Thường 2×2, không có tham số</td></tr>
+</table></div>
+<h3>Hạn chế cần biết</h3>
+<ul>
+<li>CNN chỉ có sẵn tính chất "nhận ra mẫu ở vị trí khác nhau" (dịch chuyển). Ảnh xoay, phóng to/thu nhỏ thì phải dựa vào dữ liệu đa dạng, hoặc <b>data augmentation</b> (tạo thêm ảnh bằng cách xoay, lật, cắt ngẫu nhiên).</li>
+<li>Overfitting vẫn xảy ra; các cách chống giống phần trước (validation set, early stopping, weight decay, dropout).</li>
+<li>Ví dụ trong Hình 2 chỉ là đồ chơi (16 ảnh, 23 tham số). CNN thực tế cần hàng chục nghìn ảnh trở lên và thường chạy trên GPU.</li></ul></section>
+
+<section id="s9"><h2>9. Tóm tắt 5 dòng</h2>
+<ol>
+<li>Ảnh là ma trận số; duỗi ra dùng mạng dense thì quá nhiều tham số và mất cấu trúc không gian.</li>
+<li><b>Convolution</b> trượt một kernel nhỏ qua ảnh, mỗi vị trí tính $\sum K\cdot X+b$. Cùng một kernel dùng mọi nơi (weight sharing) nên rất ít tham số.</li>
+<li>Mỗi kernel là một bộ phát hiện mẫu; đầu ra là feature map. Sau đó qua ReLU rồi <b>pooling</b> (lấy max mỗi khối, không có tham số) để thu nhỏ.</li>
+<li>Backprop giống cũ, chỉ khác là gradient của weight kernel được <b>cộng dồn trên mọi vị trí</b>: $\partial L/\partial K[m,n]=\sum\delta[i,j]\,X[i+m,j+n]$.</li>
+<li>Các kernel được học từ dữ liệu (không viết tay), tầng đầu học cạnh/vạch, tầng sau ghép thành mẫu phức tạp hơn.</li></ol></section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script>
+var BLUE='#2a78d6',RED='#e34948',ORG='#ef9f27';
+var sg=function(z){return 1/(1+Math.exp(-z));};
+function fmt(v){var r=Math.round(v*100)/100;return (r===0?0:r).toString();}
+function colr(v,mx){var t=Math.min(1,Math.abs(v)/mx);return v>=0?'rgba(42,120,214,'+(0.1+0.6*t)+')':'rgba(227,73,72,'+(0.1+0.6*t)+')';}
+function setG(id,n,h){var g=document.getElementById(id);g.style.gridTemplateColumns='repeat('+n+',36px)';g.innerHTML=h;}
+function cellh(v,bg,extra,st){return '<div class="pc '+(extra||'')+'" style="background:'+bg+';'+(st||'')+'">'+v+'</div>';}
+/* Hinh 1 */
+(function(){
+var N=6,F=3,O=4;
+function mk(){var a=[];for(var i=0;i<N;i++)a.push([0,0,0,0,0,0]);return a;}
+var IM={};
+IM['Vạch đứng']=(function(){var a=mk();for(var i=0;i<N;i++)a[i][2]=1;return a;})();
+IM['Vạch ngang']=(function(){var a=mk();for(var j=0;j<N;j++)a[3][j]=1;return a;})();
+IM['Chữ L']=(function(){var a=mk();for(var i=1;i<=4;i++)a[i][1]=1;for(var j=1;j<=4;j++)a[4][j]=1;return a;})();
+IM['Đường chéo']=(function(){var a=mk();for(var i=0;i<N;i++)a[i][i]=1;return a;})();
+var KS={'Vạch đứng':[[-1,2,-1],[-1,2,-1],[-1,2,-1]],'Vạch ngang':[[-1,-1,-1],[2,2,2],[-1,-1,-1]],'Làm mờ (trung bình)':[[1/9,1/9,1/9],[1/9,1/9,1/9],[1/9,1/9,1/9]],'Cạnh trái→phải':[[-1,0,1],[-1,0,1],[-1,0,1]]};
+var X=IM['Vạch đứng'].map(function(r){return r.slice();}),K=KS['Vạch đứng'],kn='Vạch đứng',imn='Vạch đứng';
+function gray(v){var g=Math.round(255-v*200);return 'rgb('+g+','+g+','+g+')';}
+function btns(id,obj,cur,fn){var h=document.getElementById(id);h.innerHTML='';Object.keys(obj).forEach(function(k){var b=document.createElement('button');b.textContent=k;if(k===cur)b.className='on';b.onclick=function(){fn(k);};h.appendChild(b);});}
+function conv(i,j){var s=0;for(var m=0;m<F;m++)for(var n=0;n<F;n++)s+=K[m][n]*X[i+m][j+n];return s;}
+function draw(){
+ var ci=+document.getElementById('i').value,cj=+document.getElementById('j').value,relu=document.getElementById('relu').checked;
+ document.getElementById('iv').textContent=ci;document.getElementById('jv').textContent=cj;
+ btns('imb',IM,imn,function(k){imn=k;X=IM[k].map(function(r){return r.slice();});draw();});
+ btns('kb',KS,kn,function(k){kn=k;K=KS[k];draw();});
+ var h='';for(var i=0;i<N;i++)for(var j=0;j<N;j++){var inw=i>=ci&&i<ci+F&&j>=cj&&j<cj+F;h+='<div class="pc '+(inw?'hl':'')+'" data-i="'+i+'" data-j="'+j+'" style="background:'+gray(X[i][j])+';cursor:pointer;color:'+(X[i][j]>0.5?'#fff':'#222')+'">'+X[i][j]+'</div>';}
+ setG('gx',N,h);
+ Array.prototype.forEach.call(document.querySelectorAll('#gx .pc'),function(c){c.onclick=function(){var i=+c.dataset.i,j=+c.dataset.j;X[i][j]=X[i][j]?0:1;imn='(tự vẽ)';draw();};});
+ h='';for(var m=0;m<F;m++)for(var n=0;n<F;n++)h+=cellh(fmt(K[m][n]),colr(K[m][n],2));setG('gk',F,h);
+ h='';var sum=0;for(var m=0;m<F;m++)for(var n=0;n<F;n++){var p=K[m][n]*X[ci+m][cj+n];sum+=p;h+=cellh(fmt(p),colr(p,2));}setG('gp',F,h);
+ document.getElementById('res').innerHTML='Tại (i, j) = ('+ci+', '+cj+'): tổng 9 tích = <b>'+fmt(sum)+'</b> (bias b = 0)'+(relu?' → ReLU('+fmt(sum)+') = <b>'+fmt(Math.max(0,sum))+'</b>':'');
+ var Fm=[];for(var i=0;i<O;i++){Fm.push([]);for(var j=0;j<O;j++){var v=conv(i,j);Fm[i].push(relu?Math.max(0,v):v);}}
+ h='';for(var i=0;i<O;i++)for(var j=0;j<O;j++)h+=cellh(fmt(Fm[i][j]),colr(Fm[i][j],6),(i===ci&&j===cj)?'hl':'');setG('gf',O,h);
+ h='';for(var a=0;a<2;a++)for(var b=0;b<2;b++){var mx=-1e9;for(var u=0;u<2;u++)for(var v=0;v<2;v++)mx=Math.max(mx,Fm[2*a+u][2*b+v]);h+=cellh(fmt(mx),colr(mx,6));}setG('gm',2,h);
+}
+document.getElementById('i').oninput=draw;document.getElementById('j').oninput=draw;document.getElementById('relu').onchange=draw;
+draw();
+})();
+/* Hinh 2 */
+(function(){
+var seed=5;function rnd(){seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296;}
+var N=6,F=3,O=4,data=[];
+for(var rep=0;rep<2;rep++)for(var k=1;k<=4;k++)for(var t=0;t<2;t++){var im=[];for(var i=0;i<N;i++){im.push([]);for(var j=0;j<N;j++){var on=t===0?(j===k):(i===k);im[i].push((on?1:0)+rnd()*0.15);}}data.push({x:im,y:t===0?0:1});}
+function init(s){seed=s;var P={K:[],b:[0,0],v:[0,0],c:0};for(var q=0;q<2;q++){var k=[];for(var m=0;m<F;m++){k.push([]);for(var n=0;n<F;n++)k[m].push((rnd()-.5)*.8);}P.K.push(k);}P.v=[(rnd()-.5),(rnd()-.5)];return P;}
+function clone(P){return {K:P.K.map(function(k){return k.map(function(r){return r.slice();});}),b:P.b.slice(),v:P.v.slice(),c:P.c};}
+function conv(P,x,q){var z=[];for(var i=0;i<O;i++){z.push([]);for(var j=0;j<O;j++){var s=P.b[q];for(var m=0;m<F;m++)for(var n=0;n<F;n++)s+=P.K[q][m][n]*x[i+m][j+n];z[i].push(s);}}return z;}
+function fwd(P,x){var m=[],am=[];for(var q=0;q<2;q++){var z=conv(P,x,q),best=0,bi=0,bj=0;for(var i=0;i<O;i++)for(var j=0;j<O;j++){var a=Math.max(0,z[i][j]);if(a>best){best=a;bi=i;bj=j;}}m.push(best);am.push([bi,bj]);}
+ return {m:m,am:am,p:sg(P.v[0]*m[0]+P.v[1]*m[1]+P.c)};}
+function step(P,al){var g={K:[[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]],b:[0,0],v:[0,0],c:0};
+ data.forEach(function(d){var f=fwd(P,d.x),d2=f.p-d.y;g.c+=d2;for(var q=0;q<2;q++){g.v[q]+=d2*f.m[q];if(f.m[q]>0){var dz=d2*P.v[q],a=f.am[q];g.b[q]+=dz;for(var m=0;m<F;m++)for(var n=0;n<F;n++)g.K[q][m][n]+=dz*d.x[a[0]+m][a[1]+n];}}});
+ var n=data.length;for(var q=0;q<2;q++){P.v[q]-=al*g.v[q]/n;P.b[q]-=al*g.b[q]/n;for(var m=0;m<F;m++)for(var nn=0;nn<F;nn++)P.K[q][m][nn]-=al*g.K[q][m][nn]/n;}P.c-=al*g.c/n;}
+function ev(P){var L=0,ok=0;data.forEach(function(d){var p=fwd(P,d.x).p;L+=-(d.y*Math.log(p+1e-12)+(1-d.y)*Math.log(1-p+1e-12));if((p>.5?1:0)===d.y)ok++;});return {L:L/data.length,ok:ok};}
+var NE=300,S=[],P=init(2);S.push(clone(P));for(var e=0;e<NE;e++){step(P,1.0);S.push(clone(P));}
+var Ls=S.map(function(Q){return ev(Q).L;});
+var sel=2;
+var ch=new Chart(document.getElementById('cl'),{type:'line',data:{labels:S.map(function(_,i){return i;}),datasets:[{label:'Loss J',data:Ls,borderColor:RED,pointRadius:0,borderWidth:2},{label:'Epoch đang xem',data:[],showLine:false,pointRadius:6,backgroundColor:ORG,borderColor:ORG}]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{ticks:{maxTicksLimit:10},title:{display:true,text:'Epoch'}},y:{min:0,title:{display:true,text:'J'}}}}});
+function draw(){
+ var k=+document.getElementById('e').value,P=S[k],st=ev(P);
+ document.getElementById('ev').textContent=k;document.getElementById('m0').textContent=k;document.getElementById('m1').textContent=st.L.toFixed(3);document.getElementById('m2').textContent=st.ok+' / 16';
+ for(var q=0;q<2;q++){var h='';for(var m=0;m<F;m++)for(var n=0;n<F;n++)h+=cellh(fmt(P.K[q][m][n]),colr(P.K[q][m][n],1.5));setG('k'+q,3,h);document.getElementById('k'+q+'t').textContent='Kernel '+(q+1)+' (bias '+fmt(P.b[q])+')';}
+ document.getElementById('oth').innerHTML='Dense: v₁ = <b>'+fmt(P.v[0])+'</b>, v₂ = <b>'+fmt(P.v[1])+'</b>, c = <b>'+fmt(P.c)+'</b>';
+ var d=data[sel],f=fwd(P,d.x);
+ var h='';for(var i=0;i<N;i++)for(var j=0;j<N;j++){var v=Math.min(1,d.x[i][j]);var g=Math.round(255-v*200);h+=cellh(v.toFixed(1),'rgb('+g+','+g+','+g+')','','color:'+(v>0.5?'#fff':'#222'));}setG('gx2',N,h);
+ for(var q=0;q<2;q++){var z=conv(P,d.x,q);h='';for(var i=0;i<O;i++)for(var j=0;j<O;j++){var a=Math.max(0,z[i][j]);h+=cellh(fmt(a),colr(a,4));}setG('f'+q,O,h);}
+ document.getElementById('pr').innerHTML='Giá trị lớn nhất của mỗi feature map: m₁ = <b>'+fmt(f.m[0])+'</b>, m₂ = <b>'+fmt(f.m[1])+'</b> → z = v₁m₁ + v₂m₂ + c = <b>'+fmt(P.v[0]*f.m[0]+P.v[1]*f.m[1]+P.c)+'</b> → p(vạch ngang) = <b>'+f.p.toFixed(3)+'</b> (nhãn thật: '+(d.y?'ngang = 1':'đứng = 0')+')';
+ ch.data.datasets[1].data=[{x:k,y:st.L}];ch.update('none');
+}
+document.getElementById('e').addEventListener('input',draw);
+document.getElementById('sa0').onclick=function(){sel=2;this.className='on';document.getElementById('sa1').className='';draw();};
+document.getElementById('sa1').onclick=function(){sel=3;this.className='on';document.getElementById('sa0').className='';draw();};
+var timer=null;
+document.getElementById('play').onclick=function(){var b=this;if(timer){clearInterval(timer);timer=null;b.textContent='▶ Chạy tự động';return;}
+ var e=document.getElementById('e');if(+e.value>=NE)e.value=0;b.textContent='⏸ Dừng';
+ timer=setInterval(function(){if(+e.value>=NE){clearInterval(timer);timer=null;b.textContent='▶ Chạy tự động';return;}e.value=Math.min(NE,+e.value+2);draw();},60);};
+draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bayesian Learning và Naive Bayes</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 8px;font-size:14px;color:var(--muted)}
+.ctl label{display:flex;flex-direction:column;gap:2px;min-width:150px;flex:1}
+.ctl b{color:var(--text)}
+.mets{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:8px 0}
+.met{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.met small{display:block;font-size:12px;color:var(--muted)}.met b{font-size:20px}
+.tg{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+.tg button.on{background:var(--accent-bg);border-color:transparent}
+svg.fig{width:100%;height:auto;display:block}
+svg.fig .ts{font-size:12px;fill:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Bayesian Learning và Naive Bayes</h1><p>Từ công thức Bayes tới Beta(a,b), MAP và L2, Bayesian đầy đủ và Naive Bayes, kèm 2 hình tương tác.</p></div></header>
+<nav><div class="wrap"><a href="#sx1">1. Email</a><a href="#sx2">2. Đồng xu</a><a href="#sx3">3. Beta(a,b)</a><a href="#sx4">4. ML và Bayes</a><a href="#sx5">5. Bayesian đầy đủ</a><a href="#sx6">6. Naive Bayes</a><a href="#sx7">Tóm tắt</a></div></nav>
+<main class="wrap">
+<section id="sx1"><h2>Phần 1: Ví dụ email có chữ "free"</h2>
+<p><b>Ý chính cả bài</b>: Bayesian Learning là bắt đầu bằng một lời đoán, thấy bằng chứng thì sửa lời đoán, thấy thêm bằng chứng thì sửa tiếp. Mỗi phần làm theo thứ tự: ví dụ đếm số trước, rồi mới gắn công thức vào đúng con số đó.</p>
+<p>Hộp thư có 100 email. Đếm được:</p>
+<div class="tw"><table>
+<tr><th></th><th>Có "free"</th><th>Không có</th><th>Tổng</th></tr>
+<tr><td>Spam</td><td>20</td><td>20</td><td>40</td></tr>
+<tr><td>Ham (email thường)</td><td>3</td><td>57</td><td>60</td></tr>
+<tr><td>Tổng</td><td>23</td><td>77</td><td>100</td></tr>
+</table></div>
+<p><b>Chưa mở email nào</b>: đoán "là spam" = 40/100 = <b>40%</b>. Gọi đó là <b>prior</b> (lời đoán <i>trước</i> khi thấy bằng chứng).</p>
+<p><b>Mở ra thấy chữ "free"</b>: trong 23 email có "free", có 20 spam, nên đoán lại = 20/23 ≈ <b>87%</b>. Gọi đó là <b>posterior</b> (lời đoán <i>sau</i> khi thấy bằng chứng).</p>
+<h3>Gắn ký hiệu vào con số</h3>
+<ul><li>$S$ = "email là spam", $H$ = "email là ham", $F$ = "email có chữ free".</li>
+<li>Dấu <b>|</b> đọc là "biết rằng". Ví dụ $P(F\mid S)$ đọc là "xác suất có free, biết rằng email là spam".</li></ul>
+<p>Trường hợp không có sẵn bảng đếm mà chỉ biết "spam thì hay có chữ free không", ta tính bằng bảng sau, mỗi cột là một ký hiệu:</p>
+<div class="tw"><table>
+<tr><th></th><th>Prior $P(\cdot)$</th><th>Độ hợp $P(F\mid\cdot)$</th><th>Prior × độ hợp</th><th>Chia cho tổng 0.23</th></tr>
+<tr><td>Spam</td><td>$P(S)=0.4$</td><td>$20/40=0.5$</td><td>$0.4\times0.5=0.20$</td><td>$P(S\mid F)=\mathbf{87\%}$</td></tr>
+<tr><td>Ham</td><td>$P(H)=0.6$</td><td>$3/60=0.05$</td><td>$0.6\times0.05=0.03$</td><td>$P(H\mid F)=13\%$</td></tr>
+</table></div>
+<p>Ghép các cột lại ta có <b>công thức Bayes</b>:</p>
+$$P(S\mid F)=\frac{P(F\mid S)\ P(S)}{P(F)}\qquad\text{thế số:}\qquad\frac{0.5\times0.4}{0.23}=0.87$$
+<h3>Vì sao công thức đúng</h3>
+<p>Tử số $P(F\mid S)\,P(S)=\frac{20}{40}\times\frac{40}{100}=\frac{20}{100}$. Số 40 triệt tiêu nhau, nên đây là tỉ lệ email <b>vừa spam vừa có "free"</b> trong cả hộp thư. Kí hiệu tỉ lệ này là $P(F,S)$ và ta viết được theo hai cách:</p>
+$$P(F,S)=P(F\mid S)\,P(S)\qquad\text{và}\qquad P(F,S)=P(S\mid F)\,P(F)$$
+<p>Cách đầu: lấy spam (40/100), rồi lấy phần có free trong đó (20/40). Cách sau: lấy email có free (23/100), rồi lấy phần spam trong đó (20/23). Cả hai đều ra 20/100. Cho hai cách bằng nhau rồi chia hai vế cho $P(F)$ thì ra công thức Bayes.</p>
+<p><b>Mẫu số là một tổng</b>: email có "free" chỉ có thể là spam hoặc ham, nên</p>
+$$P(F)=P(F\mid S)P(S)+P(F\mid H)P(H)=0.20+0.03=0.23$$
+<p>Mẫu số chỉ có một việc: làm cho đáp án cộng lại thành 100% (87% + 13%).</p></section>
+
+<section id="sx2"><h2>Phần 2: Một đồng xu chưa biết độ lệch</h2>
+<h3>2.1 Bài toán, và vì sao "đồng nào" liên quan tới "ngửa"</h3>
+<p>Bạn có <b>một</b> đồng xu và không biết nó lệch bao nhiêu. Để tính bằng bảng, ta giả sử chỉ có 3 khả năng về loại đồng xu của bạn:</p>
+<ul><li>Loại X: tung nhiều lần chỉ ngửa khoảng 30%.</li><li>Loại Y: công bằng, ngửa 50%.</li><li>Loại Z: lệch ngược, ngửa 70%.</li></ul>
+<p>(Cũng có thể hình dung là rút một đồng từ túi có 3 đồng X, Y, Z và nhắm mắt.) Ban đầu bạn không biết gì nên đoán mỗi loại <b>1/3</b>.</p>
+<p><b>Mối liên hệ</b>: loại đồng xu quyết định xác suất ra ngửa. Bạn không nhìn được loại đồng, chỉ nhìn được <b>kết quả tung</b>. Cũng như thấy chữ "free" làm bạn nghi email là spam hơn, thấy ra ngửa làm bạn nghi đồng xu là loại Z hơn.</p>
+<div class="tw"><table>
+<tr><th></th><th>Ví dụ email</th><th>Ví dụ đồng xu</th></tr>
+<tr><td>Điều chưa biết (muốn đoán)</td><td>Email này spam hay ham?</td><td>Đồng xu này loại X, Y hay Z?</td></tr>
+<tr><td>Bằng chứng quan sát được</td><td>Email có chữ "free"</td><td>Tung ra ngửa</td></tr>
+<tr><td>Vì sao bằng chứng có ích</td><td>Spam hay có "free" hơn ham</td><td>Loại Z hay ra ngửa hơn loại X</td></tr>
+</table></div>
+<p>Bài toán thật là một đồng xu có độ lệch $\theta$ bất kỳ. Việc cho $\theta$ chỉ có 3 giá trị chỉ để tính bằng bảng cho dễ (Phần 3 cho $\theta$ nhận mọi giá trị).</p>
+<h3>2.2 Tung lần 1: ra ngửa</h3>
+<p>Dùng cùng khung với Phần 1, chỉ đổi tên:</p>
+<div class="tw"><table>
+<tr><th>Phần 1</th><th>Phần 2</th><th>Ý nghĩa</th></tr>
+<tr><td>$S$, $H$</td><td>$\theta$ (loại đồng: X, Y hay Z)</td><td>Điều ta chưa biết, muốn đoán</td></tr>
+<tr><td>$F$ ("có free")</td><td>$D$ ("ra ngửa")</td><td>Bằng chứng vừa thấy</td></tr>
+</table></div>
+<div class="tw"><table>
+<tr><th>Loại</th><th>Đoán cũ $P(\theta)$</th><th>Xác suất ra ngửa $P(D\mid\theta)$</th><th>Đoán cũ × xác suất</th><th>Đoán mới = tích / 0.5 $P(\theta\mid D)$</th></tr>
+<tr><td>X</td><td>1/3</td><td>0.3</td><td>0.100</td><td><b>20%</b></td></tr>
+<tr><td>Y</td><td>1/3</td><td>0.5</td><td>0.167</td><td><b>33%</b></td></tr>
+<tr><td>Z</td><td>1/3</td><td>0.7</td><td>0.233</td><td><b>47%</b></td></tr>
+</table></div>
+$$P(\theta\mid D)=\frac{P(D\mid\theta)\ P(\theta)}{P(D)}$$
+<p>Các thuật ngữ cho từng cột: $P(\theta)$ là <b>prior</b>, $P(D\mid\theta)$ là <b>likelihood</b>, $P(D)$ là <b>evidence</b>, $P(\theta\mid D)$ là <b>posterior</b>.</p>
+<p><b>Vì sao chia cho 0.5?</b> Đó là tổng cả cột "Đoán cũ × xác suất": $0.100+0.167+0.233=0.5$. Chia cho nó để ba đáp án cộng lại đúng 100% (20% + 33% + 47%). Con số này cũng chính là xác suất bạn thấy ngửa ở lần tung đầu, trước khi biết loại đồng: $\frac13(0.3)+\frac13(0.5)+\frac13(0.7)=0.5$, tức $P(D)=\sum_\theta P(D\mid\theta)P(\theta)$.</p>
+<p><b>Dấu $\propto$ (tỉ lệ với)</b>: $P(D)=0.5$ là cùng một số cho cả 3 loại, nó chỉ co cả cột cho đủ 100%. Khi chỉ cần so sánh các loại với nhau, ta bỏ nó đi:</p>
+$$P(\theta\mid D)\ \propto\ P(D\mid\theta)\,P(\theta)\qquad\text{tức: posterior}\propto\text{likelihood}\times\text{prior}$$
+<h3>2.3 Tung lần 2: lại ngửa</h3>
+<p>Lấy cột "đoán mới" vừa rồi làm "đoán cũ" (posterior hôm nay là prior ngày mai):</p>
+$$P(\theta\mid D_1,D_2)\ \propto\ P(D_2\mid\theta)\ \underbrace{P(\theta\mid D_1)}_{\text{posterior cũ = prior mới}}$$
+<div class="tw"><table>
+<tr><th>Loại</th><th>Đoán cũ</th><th>Xác suất ra ngửa</th><th>Đoán cũ × xác suất</th><th>Đoán mới = tích / 0.553</th></tr>
+<tr><td>X</td><td>20%</td><td>0.3</td><td>0.060</td><td><b>11%</b></td></tr>
+<tr><td>Y</td><td>33%</td><td>0.5</td><td>0.167</td><td><b>30%</b></td></tr>
+<tr><td>Z</td><td>47%</td><td>0.7</td><td>0.327</td><td><b>59%</b></td></tr>
+</table></div>
+<p><b>Vì sao chia cho 0.553?</b> Giống lần 1: đó là tổng cột, $0.060+0.167+0.327=0.553$, chia để ba đáp án cộng lại thành 100%. Ý nghĩa của nó: xác suất lần tung thứ hai ra ngửa khi đã thấy lần đầu ngửa. Nó lớn hơn 0.5 vì lần ngửa đầu làm bạn nghiêng về các loại hay ra ngửa.</p>
+<h3>2.4 Kiểm tra: gộp hai lần tung làm một</h3>
+<p>Thay vì cập nhật từng lần, coi "ngửa, ngửa" là một bằng chứng duy nhất và quay lại prior 1/3 ban đầu. Cần likelihood của hai lần ngửa.</p>
+<p><b>Vì sao là $\theta\cdot\theta=\theta^2$?</b> Hai lần tung độc lập (đồng xu không nhớ lần trước). Đếm trên 100 cặp lần tung của loại Z (ngửa 0.7):</p>
+<ol><li>Khoảng <b>70</b> trong 100 cặp có lần đầu ngửa.</li>
+<li>Trong 70 cặp đó, lần hai vẫn ngửa 70%: $70\times0.7=49$ cặp.</li>
+<li>Vậy 49 trong 100 cặp là ngửa-ngửa, $\frac{49}{100}=0.49=0.7\times0.7$.</li></ol>
+<p>Kiểm tra bằng cách cộng cả 4 kết quả của loại Z: ngửa-ngửa $0.49$, ngửa-sấp $0.7\times0.3=0.21$, sấp-ngửa $0.21$, sấp-sấp $0.3\times0.3=0.09$, tổng $=1.00$. Tổng bằng 1 nên quy tắc "nhân" là đúng (cộng 0.7 + 0.7 sẽ ra 1.4, vượt quá 1).</p>
+<div class="tw"><table>
+<tr><th>Loại</th><th>$\theta^2$</th><th>× prior 1/3</th><th>Chia cho tổng 0.2767</th></tr>
+<tr><td>X</td><td>0.09</td><td>0.030</td><td>11%</td></tr>
+<tr><td>Y</td><td>0.25</td><td>0.083</td><td>30%</td></tr>
+<tr><td>Z</td><td>0.49</td><td>0.163</td><td>59%</td></tr>
+</table></div>
+<p>Kết quả 11% / 30% / 59%, khớp từng con số của cách làm hai bước. Dữ liệu tới từ từ hay tới một lần đều cho cùng kết quả.</p></section>
+
+<section id="sx3"><h2>Phần 3: Vô số loại đồng xu, và Beta(a,b) là gì</h2>
+<h3>3.1 Vì sao cần một "đường cong"</h3>
+<p>Ở Phần 2, $\theta$ chỉ có 3 giá trị nên niềm tin của bạn là 3 con số (1/3, 1/3, 1/3). Nhưng độ lệch thật của một đồng xu có thể là <b>bất kỳ số nào từ 0 đến 1</b> (0.31, 0.5, 0.8, ...). Có vô số khả năng thì không thể viết một bảng vô số hàng. Thay vào đó ta <b>vẽ niềm tin thành một đường cong theo $\theta$</b>: chỗ nào đường cong cao thì khả năng đó được tin nhiều hơn.</p>
+<p>Vẫn là bảng 3 hàng của Phần 2, chỉ là mỗi giá trị $\theta$ giờ có một "chiều cao" thay cho một con số 1/3. Lưu ý: chiều cao không phải xác suất. <b>Diện tích dưới đường cong</b> giữa hai điểm mới là xác suất (ví dụ diện tích từ 0.6 đến 0.8 là xác suất để $\theta$ nằm trong khoảng đó), và tổng diện tích cả đường cong bằng 1.</p>
+<h3>3.2 Beta(a,b) là gì</h3>
+<p>Ta cần một họ đường cong trên đoạn $[0,1]$ mà uốn được theo ý mình (phẳng, nhọn, lệch trái, lệch phải). <b>$\text{Beta}(a,b)$ là họ đó, với hai "núm vặn" $a$ và $b$:</b></p>
+$$P(\theta)\propto\theta^{\,a-1}(1-\theta)^{\,b-1}\qquad(\text{Beta}(a,b))$$
+<p>Dấu $\propto$ chỉ che đi một hằng số chuẩn hóa, để diện tích dưới đường cong bằng 1. Hình dạng nằm hết trong $\theta^{a-1}(1-\theta)^{b-1}$.</p>
+<p><b>Cách hiểu dễ nhớ nhất</b>: nhìn lại likelihood ở 2.4. Nếu thấy $h$ ngửa và $t$ sấp thì likelihood là $\theta^{h}(1-\theta)^{t}$. Đem so với $\theta^{a-1}(1-\theta)^{b-1}$ thì thấy hai dạng giống hệt nhau, chỉ khác tên số mũ. Nên:</p>
+<div class="box"><b>$\text{Beta}(a,b)$ là niềm tin của một người đã thấy $a-1$ lần ngửa và $b-1$ lần sấp</b> (gọi là "ngửa ảo" và "sấp ảo"), bắt đầu từ trạng thái chưa biết gì.</div>
+<p><b>Kiểm tra</b>: "chưa biết gì" là $\text{Beta}(1,1)$. Thế $a=b=1$: $\theta^{0}(1-\theta)^{0}=1$, một đường <b>nằm ngang</b> (mọi $\theta$ đều ngang nhau). Nhân đường này với likelihood của $h$ ngửa, $t$ sấp:</p>
+$$1\times\theta^{h}(1-\theta)^{t}=\theta^{(h+1)-1}(1-\theta)^{(t+1)-1}=\text{Beta}(h+1,\ t+1)$$
+<p>Đây chính là đường <b>cam</b> (likelihood đã chuẩn hóa) mà Hình 1 vẽ.</p>
+<p><b>Bảng các dạng thường gặp</b> (mean $=\frac{a}{a+b}$, độ lệch chuẩn $=\sqrt{\frac{ab}{(a+b)^2(a+b+1)}}$):</p>
+<div class="tw"><table>
+<tr><th>$\text{Beta}(a,b)$</th><th>"Lần tung ảo"</th><th>Hình dạng</th><th>Mean</th><th>Độ lệch chuẩn</th><th>Ý nghĩa niềm tin</th></tr>
+<tr><td>$(1,1)$</td><td>0 ngửa, 0 sấp</td><td>Nằm ngang</td><td>0.50</td><td>0.289</td><td>Chưa biết gì</td></tr>
+<tr><td>$(2,2)$</td><td>1 ngửa, 1 sấp</td><td>Chuông thấp, giữa 0.5</td><td>0.50</td><td>0.224</td><td>Hơi tin là công bằng</td></tr>
+<tr><td>$(20,20)$</td><td>19 ngửa, 19 sấp</td><td>Chuông hẹp, giữa 0.5</td><td>0.50</td><td>0.078</td><td>Rất tin là công bằng</td></tr>
+<tr><td>$(8,2)$</td><td>7 ngửa, 1 sấp</td><td>Lệch về phía 1</td><td>0.80</td><td>0.121</td><td>Tin đồng xu thiên về ngửa</td></tr>
+</table></div>
+<p><b>Quy tắc đọc $a$ và $b$</b>:</p>
+<ul><li>$a$ lớn hơn $b$ thì đường cong nghiêng về phía ngửa ($\theta$ gần 1). $b$ lớn hơn $a$ thì nghiêng về phía sấp.</li>
+<li>$a+b-2$ là tổng số lần tung ảo, tức <b>độ mạnh của niềm tin</b>. Tổng càng lớn, đường cong càng hẹp và càng khó bị dữ liệu mới lay chuyển.</li></ul>
+<h3>3.3 Vì sao chọn Beta làm prior</h3>
+<ol><li>Nó sống trên $[0,1]$, đúng miền của một xác suất $\theta$.</li>
+<li>Hai núm $a$, $b$ uốn được nhiều dạng niềm tin (bảng trên).</li>
+<li><b>Quan trọng nhất</b>: nhân với likelihood chỉ là cộng số mũ, và kết quả vẫn là Beta (gọi là <i>conjugate prior</i>):</li></ol>
+$$\underbrace{\theta^{a-1}(1-\theta)^{b-1}}_{\text{prior}}\times\underbrace{\theta^{h}(1-\theta)^{t}}_{\text{likelihood}}=\theta^{a+h-1}(1-\theta)^{b+t-1}\ \Rightarrow\ \text{posterior}=\text{Beta}(a+h,\ b+t)$$
+<p>Đọc theo nghĩa "lần tung ảo": posterior = prior ($a-1$ ngửa ảo, $b-1$ sấp ảo) <b>cộng</b> dữ liệu thật ($h$ ngửa, $t$ sấp). Nên cập nhật chỉ là <b>cộng đếm</b>: thấy ngửa thì $a$ tăng 1, thấy sấp thì $b$ tăng 1.</p>
+<h3>3.4 Cập nhật và đọc kết quả</h3>
+<p>Thế số với prior $\text{Beta}(2,2)$, tức $\theta(1-\theta)$:</p>
+<div class="tw"><table>
+<tr><th>Lần tung</th><th>Kết quả</th><th>Phép nhân</th><th>Posterior</th><th>Mean $\frac{a}{a+b}$</th></tr>
+<tr><td>(ban đầu)</td><td></td><td></td><td>Beta(2,2)</td><td>0.500</td></tr>
+<tr><td>1</td><td>Ngửa</td><td>$\theta(1-\theta)\cdot\theta=\theta^2(1-\theta)$</td><td>Beta(3,2)</td><td>0.600</td></tr>
+<tr><td>2</td><td>Ngửa</td><td>$\theta^2(1-\theta)\cdot\theta=\theta^3(1-\theta)$</td><td>Beta(4,2)</td><td>0.667</td></tr>
+<tr><td>3</td><td>Sấp</td><td>$\theta^3(1-\theta)\cdot(1-\theta)=\theta^3(1-\theta)^2$</td><td>Beta(4,3)</td><td>0.571</td></tr>
+</table></div>
+<p>Sau 10 lần tung được 7 ngửa, 3 sấp: $\text{Beta}(2+7,\,2+3)=\text{Beta}(9,5)$. Có ba con số cần phân biệt:</p>
+<ul><li><b>Mean</b> của $\text{Beta}(A,B)$ là $\frac{A}{A+B}$, ở đây $\frac{9}{14}=0.643$. Độ lệch chuẩn $\approx0.124$.</li>
+<li><b>Đỉnh</b> (MAP) của $\text{Beta}(A,B)$ là $\frac{A-1}{A+B-2}$, ở đây $\frac{8}{12}=0.667$.</li>
+<li><b>MLE</b> (chỉ nhìn dữ liệu, không prior) là $\frac{h}{n}=\frac{7}{10}=0.700$.</li></ul>
+<p>Mean của posterior là trung bình có trọng số giữa prior và dữ liệu:</p>
+$$\frac{a+h}{a+b+n}=\frac{a+b}{a+b+n}\cdot\frac{a}{a+b}+\frac{n}{a+b+n}\cdot\frac{h}{n}\ \ \text{thế số:}\ \ \frac{4}{14}\times0.5+\frac{10}{14}\times0.7=0.643$$
+<p>Khi $n$ tăng, trọng số của dữ liệu tiến tới 1 và prior bị lấn át.</p>
+<h3>Hình 1: prior → likelihood → posterior</h3>
+
+<div class="ctl">
+<label>Prior a: <b id="av">2</b><input type="range" id="a" min="1" max="20" value="2" step="1"></label>
+<label>Prior b: <b id="bv">2</b><input type="range" id="b" min="1" max="20" value="2" step="1"></label>
+<label>Số lần ngửa h: <b id="hv">7</b><input type="range" id="h" min="0" max="60" value="7" step="1"></label>
+<label>Số lần sấp t: <b id="tv">3</b><input type="range" id="t" min="0" max="60" value="3" step="1"></label>
+</div>
+<div class="btns"><button id="bh" type="button">+1 ngửa</button> <button id="bt" type="button">+1 sấp</button> <button id="br" type="button">Đặt lại</button></div>
+<svg class="fig" viewBox="0 0 680 290" role="img" aria-label="Prior, likelihood, posterior"><g id="ax"></g>
+<path id="pp" fill="none" stroke="#888780" stroke-width="2" stroke-dasharray="5 4"/>
+<path id="pl" fill="none" stroke="#BA7517" stroke-width="2"/>
+<path id="po" fill="none" stroke="#185FA5" stroke-width="3"/>
+<g transform="translate(450,18)"><line x1="0" y1="0" x2="26" y2="0" stroke="#888780" stroke-width="2" stroke-dasharray="5 4"/><text class="ts" x="32" y="4">Prior Beta(a,b)</text>
+<line x1="0" y1="16" x2="26" y2="16" stroke="#BA7517" stroke-width="2"/><text class="ts" x="32" y="20">Likelihood (chuẩn hóa)</text>
+<line x1="0" y1="32" x2="26" y2="32" stroke="#185FA5" stroke-width="3"/><text class="ts" x="32" y="36">Posterior Beta(a+h,b+t)</text></g></svg>
+<div class="mets">
+<div class="met"><small>Posterior</small><b id="m0"></b></div>
+<div class="met"><small>Mean posterior</small><b id="m1"></b></div>
+<div class="met"><small>MAP (đỉnh)</small><b id="m2"></b></div>
+<div class="met"><small>MLE</small><b id="m3"></b></div>
+<div class="met"><small>Độ lệch chuẩn</small><b id="m4"></b></div>
+</div>
+
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li><b>Ba đường cong</b> theo $\theta$ (xác suất ngửa, từ 0 đến 1). Xám nét đứt là prior $\text{Beta}(a,b)$. Cam là likelihood đã chuẩn hóa, đỉnh của nó chính là MLE $h/(h+t)$. Xanh đậm là posterior $\text{Beta}(a+h,\,b+t)$.</li>
+<li><b>Thử 1</b>: mặc định (prior $2,2$; $h=7$, $t=3$). Posterior nằm giữa prior và likelihood, đỉnh ≈ 0.667 (MAP), thấp hơn MLE 0.700.</li>
+<li><b>Thử 2</b>: kéo prior lên $a=b=20$. Posterior gần như không nhúc nhích khỏi 0.5. Prior mạnh (nhiều lần tung ảo) thì cần nhiều dữ liệu thật để đổi ý.</li>
+<li><b>Thử 3</b>: giữ prior $2,2$, tăng $h$ và $t$ theo tỉ lệ 7:3 (ví dụ $h=42$, $t=18$). Đường xanh dần trùng đường cam và hẹp lại. Nhiều dữ liệu thì prior bị lấn át, đúng với công thức trọng số ở 3.4.</li>
+<li><b>Thử 4 (nhìn các dạng Beta)</b>: đặt $h=0$, $t=0$ thì đường xanh trùng đường prior. Rồi chọn $a=b=1$ để thấy đường nằm ngang, $a=8$, $b=2$ để thấy đường lệch về phía ngửa.</li>
+<li><b>Nút +1 ngửa / +1 sấp</b> mô phỏng đúng bảng cập nhật từng lần tung ở 3.4.</li></ul></div>
+</section>
+
+<section id="sx4"><h2>Phần 4: MAP, L2 regularization, và vì sao Machine Learning lại gặp posterior</h2>
+<h3>4.1 Vì sao đang nói về trọng số $w$ mà lại xuất hiện posterior</h3>
+<p>Câu trả lời ngắn: <b>trọng số $w$ chính là "loại đồng xu" của Phần 2.</b> Mỗi bộ $w$ là một giả thuyết về cách thế giới hoạt động, và dữ liệu huấn luyện là bằng chứng giúp ta đoán giả thuyết nào đúng. Đây là bảng dịch:</p>
+<div class="tw"><table>
+<tr><th>Ví dụ đồng xu</th><th>Machine Learning</th></tr>
+<tr><td>$\theta$ (độ lệch chưa biết)</td><td>$w$ (trọng số chưa biết)</td></tr>
+<tr><td>Tung đồng, ghi ngửa/sấp</td><td>Dữ liệu huấn luyện $D=\{(x_i,y_i)\}$</td></tr>
+<tr><td>Likelihood $P(D\mid\theta)=\theta^h(1-\theta)^t$</td><td>Likelihood $P(D\mid w)=\prod_i P(y_i\mid x_i,w)$</td></tr>
+<tr><td>Prior $P(\theta)$: tin gì về $\theta$ trước khi tung</td><td>Prior $P(w)$: tin gì về $w$ trước khi thấy dữ liệu</td></tr>
+<tr><td>Posterior $P(\theta\mid D)$</td><td>Posterior $P(w\mid D)$</td></tr>
+</table></div>
+<p>Hai cách nhìn là <b>một</b>. Cách nhìn "loss function" bạn đã học và cách nhìn "likelihood" của Bayes là cùng một thứ viết bằng hai ngôn ngữ.</p>
+<h3>4.2 Loss chính là $-\log(\text{likelihood})$</h3>
+<p><b>Logistic Regression</b> (một mẫu, $p=\sigma(wx)$). Xác suất mô hình gán cho nhãn thật là cùng dạng Bernoulli như đồng xu, chỉ khác là xác suất ngửa $p$ phụ thuộc vào $x$ và $w$ thay vì cố định $\theta$:</p>
+$$P(y\mid x,w)=p^{\,y}(1-p)^{1-y}$$
+<p>Có nhiều mẫu độc lập thì nhân lại (giống nhân $\theta\cdot\theta$ ở 2.4): $P(D\mid w)=\prod_i P(y_i\mid x_i,w)$. Lấy $-\log$ để tích thành tổng:</p>
+$$-\log P(D\mid w)=-\sum_i\big[y_i\log p_i+(1-y_i)\log(1-p_i)\big]=\text{log loss (cross-entropy)}$$
+<p>Nên <b>tối thiểu hóa log loss = tối đa hóa likelihood</b>. Cách làm này gọi là <b>MLE</b> (Maximum Likelihood Estimation). Với <b>Linear Regression</b> nhiễu Gaussian, $P(y\mid x,w)\propto e^{-(y-wx)^2/2\sigma^2}$, lấy $-\log$ ra đúng <b>MSE</b>.</p>
+<h3>4.3 Ví dụ một mẫu: bảng 3 hàng cho $w$</h3>
+<p>Giống 3 loại đồng xu, giả sử $w$ chỉ có 3 giá trị. Một mẫu: đặc trưng $x=2$, nhãn thật $y=1$. Mô hình cho $P(y=1)=\sigma(wx)$:</p>
+<div class="tw"><table>
+<tr><th>$w$</th><th>$wx$</th><th>Likelihood $P(y=1\mid x,w)=\sigma(wx)$</th><th>Loss $=-\ln(\text{likelihood})$</th></tr>
+<tr><td>0</td><td>0</td><td>0.500</td><td>0.693</td></tr>
+<tr><td>1</td><td>2</td><td>0.881</td><td>0.127</td></tr>
+<tr><td>3</td><td>6</td><td>0.998</td><td>0.0025</td></tr>
+</table></div>
+<p><b>MLE</b> chọn hàng có likelihood cao nhất (cũng là loss thấp nhất): $w=3$. Đây là toàn bộ việc "huấn luyện bằng Gradient Descent" ở các phần trước, chỉ là tìm hàng tốt nhất trong vô số hàng.</p>
+<p><b>Nếu có prior (kéo về $w$ nhỏ):</b> giả sử prior ưu tiên $w$ nhỏ, 50% / 30% / 20% cho $w=0,1,3$. Nhân prior với likelihood rồi chia cho tổng (đúng như bảng ở 2.2):</p>
+<div class="tw"><table>
+<tr><th>$w$</th><th>Prior</th><th>Likelihood</th><th>Prior × likelihood</th><th>Posterior (chia 0.714)</th><th>Posterior nếu prior phẳng (1/3 mỗi hàng)</th></tr>
+<tr><td>0</td><td>0.5</td><td>0.500</td><td>0.250</td><td><b>35%</b></td><td>21%</td></tr>
+<tr><td>1</td><td>0.3</td><td>0.881</td><td>0.264</td><td><b>37%</b></td><td>37%</td></tr>
+<tr><td>3</td><td>0.2</td><td>0.998</td><td>0.200</td><td><b>28%</b></td><td>42%</td></tr>
+</table></div>
+<p>Với prior phẳng thì $w=3$ thắng. Với prior ưu tiên $w$ nhỏ thì $w=1$ thắng. Chọn hàng cao nhất của cột posterior chính là <b>MAP</b>: dữ liệu nói "$w=3$ khớp nhất", nhưng prior nói "$w$ lớn là điều ít có khả năng", và kết quả bị kéo về $w=1$. Đó là toàn bộ ý nghĩa của regularization.</p>
+<h3>4.4 Ba cấp độ dùng posterior</h3>
+<div class="tw"><table>
+<tr><th>Cách</th><th>Làm gì với bảng/đường cong posterior</th><th>Ví dụ ở trên</th></tr>
+<tr><td>MLE</td><td>Bỏ prior, chọn hàng likelihood cao nhất</td><td>$w=3$</td></tr>
+<tr><td>MAP</td><td>Có prior, chọn hàng posterior cao nhất</td><td>$w=1$</td></tr>
+<tr><td>Bayesian đầy đủ</td><td>Giữ cả bảng, không chọn một hàng</td><td>Phần 5</td></tr>
+</table></div>
+<p><b>Vì sao dân Machine Learning hay chỉ nói về $w$ mà không thấy posterior?</b> Vì với model thật, $w$ có hàng triệu chiều (mỗi trọng số của Neural Network là một chiều), nên "bảng" posterior có vô số hàng và không thể giữ hết. Ta đành chọn <b>một</b> hàng ($w$ duy nhất), và posterior chỉ còn hiện ra ngầm đằng sau câu "chọn $w$ tốt nhất". Posterior luôn ở đó, chỉ là ta quyết định không vẽ nó ra.</p>
+<h3>4.5 Từ MAP ra L2 regularization</h3>
+<p>Từ công thức Phần 2, bỏ $P(D)$ (không phụ thuộc $w$) rồi lấy log (tích thành tổng):</p>
+$$w_{\text{MAP}}=\arg\max_w\ P(D\mid w)P(w)=\arg\max_w\ \big[\log P(D\mid w)+\log P(w)\big]=\arg\min_w\ \big[\underbrace{-\log P(D\mid w)}_{\text{loss}}\ \underbrace{-\log P(w)}_{\text{phần prior}}\big]$$
+<p>Chọn prior Gaussian: tin $w$ nhiều khả năng gần 0, độ rộng $\tau$:</p>
+$$P(w)\propto e^{-w^2/(2\tau^2)}\ \Rightarrow\ -\log P(w)=\frac{w^2}{2\tau^2}+\text{const}$$
+<p>Thế vào: cực tiểu hóa $\text{loss}(w)+\lambda\,w^2$ với $\lambda\propto\frac{1}{\tau^2}$. Đây chính là <b>L2 regularization</b>. Prior hẹp ($\tau$ nhỏ, tin chắc $w$ nhỏ) tương ứng $\lambda$ lớn.</p>
+<p><b>Thế số</b> (một trọng số). Giả sử $-\log P(D\mid w)=\frac12(w-3)^2$ (dữ liệu muốn $w=3$):</p>
+$$J(w)=\tfrac12(w-3)^2+\tfrac{1}{2\tau^2}w^2\ \Rightarrow\ J'(w)=(w-3)+\tfrac{w}{\tau^2}=0\ \Rightarrow\ w=\frac{3}{1+\lambda},\ \ \lambda=\frac{1}{\tau^2}$$
+<div class="tw"><table>
+<tr><th>Prior</th><th>$\tau^2$</th><th>$\lambda=1/\tau^2$</th><th>$w_{\text{MAP}}$</th></tr>
+<tr><td>Không có prior (phẳng, MLE)</td><td>$\infty$</td><td>0</td><td>3.00</td></tr>
+<tr><td>Rộng</td><td>3</td><td>0.33</td><td>2.25</td></tr>
+<tr><td>Vừa</td><td>1</td><td>1</td><td>1.50</td></tr>
+<tr><td>Hẹp</td><td>0.33</td><td>3</td><td>0.75</td></tr>
+</table></div>
+<p>Prior càng hẹp càng kéo $w$ về 0. Khớp với bảng 4.3 và giống việc kéo $a=b=20$ ở Hình 1 (prior mạnh thì khó bị dữ liệu lay chuyển). Hai điều cần nhớ:</p>
+<ul><li><b>L2 regularization = MAP với prior Gaussian</b>. Không dùng regularization nghĩa là ngầm dùng prior phẳng (MLE).</li>
+<li>Đổi prior thì đổi loại regularization: prior Laplace cho ra <b>L1</b> ($\lambda|w|$).</li></ul>
+<div class="tw"><table>
+<tr><th>Phương pháp</th><th>Tối ưu cái gì</th><th>Kết quả</th></tr>
+<tr><td>MLE</td><td>$P(D\mid w)$</td><td>1 điểm, không có prior</td></tr>
+<tr><td>MAP</td><td>$P(D\mid w)P(w)$</td><td>1 điểm, có prior (= thêm regularization)</td></tr>
+<tr><td>Bayesian đầy đủ</td><td>Giữ cả $P(w\mid D)$</td><td>Cả phân phối</td></tr>
+</table></div></section>
+
+<section id="sx5"><h2>Phần 5: Bayesian đầy đủ khác MAP ở đâu</h2>
+<p>MAP chỉ giữ một điểm rồi vứt phần còn lại của posterior. <b>Bayesian đầy đủ</b> dùng cả posterior khi dự đoán. Quay lại bảng ở 2.3 (sau hai lần ngửa: 11% / 30% / 59%). Tính xác suất lần tung thứ 3 ra ngửa:</p>
+<ul><li><b>MAP</b>: chọn loại đồng có posterior cao nhất (Z, 59%), dự đoán <b>0.7</b>.</li>
+<li><b>Trung bình theo posterior</b> (posterior predictive): mỗi loại dự đoán $\theta$, nhân trọng số posterior của nó:</li></ul>
+$$P(\text{ngửa}\mid D)=\sum_\theta\theta\cdot P(\theta\mid D)=0.3\times0.11+0.5\times0.30+0.7\times0.59=0.033+0.150+0.413=\mathbf{0.596}$$
+<p>Kết quả khác nhau: trung bình ra 0.596 vì vẫn còn 41% niềm tin dành cho hai loại còn lại, mà MAP bỏ qua. Với $\theta$ liên tục, tổng thành tích phân:</p>
+$$P(y^*\mid x^*,D)=\int P(y^*\mid x^*,\theta)\,P(\theta\mid D)\,d\theta$$
+<p>Với đồng xu Beta(9,5), kết quả của tích phân này là mean $=9/14=0.643$. Trong Machine Learning, thay $\theta$ bằng $w$: dự đoán là trung bình của mọi mô hình có thể có, mỗi mô hình có trọng số bằng posterior của $w$ tương ứng. Với model lớn, tích phân không tính trực tiếp được, nên dùng xấp xỉ: <b>MCMC</b> (lấy mẫu từ posterior), <b>Variational Inference</b>, và với Neural Network là Bayesian NN, MC Dropout, Deep Ensembles.</p>
+<p><b>Lợi ích</b>: biết được <b>uncertainty</b> (độ chắc chắn), và hoạt động tốt khi dữ liệu ít nhờ prior. <b>Cái giá</b>: tính toán nặng hơn nhiều, kết quả phụ thuộc vào cách chọn prior.</p></section>
+
+<section id="sx6"><h2>Phần 6: Naive Bayes</h2>
+<h3>6.1 Thêm chữ thứ hai vào ví dụ email</h3>
+<p>Dùng lại bảng đếm của Phần 1 và thêm chữ "win": 16/40 email spam có "win", 2/60 email ham có "win". Email cần phân loại có <b>cả "free" lẫn "win"</b>. Gọi $W$ = "có chữ win". Cần:</p>
+$$P(S\mid F,W)\ \propto\ P(F,W\mid S)\,P(S)$$
+<p>Muốn có $P(F,W\mid S)$ thì phải đếm "số spam có <i>cả hai</i> chữ", chia cho 40. Với 2 chữ thì đếm được. Nhưng với 1000 chữ có $2^{1000}$ tổ hợp có/không, không thể đếm.</p>
+<h3>6.2 Giả định "naive" biến phép đếm thành phép nhân</h3>
+<p>Chain rule (suy ra từ định nghĩa có điều kiện ở Phần 1): $P(F,W\mid S)=P(F\mid S)\cdot P(W\mid F,S)$. <b>Giả định naive</b>: biết là spam rồi thì chữ "win" không phụ thuộc vào việc có "free" hay không, nghĩa là $P(W\mid F,S)=P(W\mid S)$. Khi đó:</p>
+$$P(F,W\mid S)=P(F\mid S)\cdot P(W\mid S)$$
+<p>Đây là cùng kiểu "độc lập thì nhân" như $\theta\cdot\theta$ ở 2.4, chỉ khác là ở đây độc lập <i>có điều kiện</i> (khi đã biết là spam). Tổng quát với $d$ chữ:</p>
+$$P(S\mid x)\ \propto\ P(S)\prod_{j=1}^{d}P(x_j\mid S)$$
+<p>Thế số:</p>
+<div class="tw"><table>
+<tr><th></th><th>Spam</th><th>Ham</th></tr>
+<tr><td>Prior</td><td>0.4</td><td>0.6</td></tr>
+<tr><td>free (có)</td><td>$20/40=0.5$</td><td>$3/60=0.05$</td></tr>
+<tr><td>win (có)</td><td>$16/40=0.4$</td><td>$2/60=0.0333$</td></tr>
+<tr><td><b>Tích</b></td><td>$0.4\times0.5\times0.4=\mathbf{0.08}$</td><td>$0.6\times0.05\times0.0333=\mathbf{0.001}$</td></tr>
+</table></div>
+<p>Chuẩn hóa: $P(S\mid F,W)=\frac{0.08}{0.08+0.001}=\mathbf{98.8\%}$ (chia cho tổng, giống 0.553 ở Phần 2). Giả định này thường sai (hai chữ "free" và "win" hay đi cùng nhau), nhưng phân loại vẫn thường đủ tốt vì chỉ cần thứ tự giữa hai lớp đúng.</p>
+<h3>6.3 Chữ vắng mặt dùng $1-p$</h3>
+<p>Nếu email <i>không</i> có chữ "meeting": 2/40 spam có "meeting", 30/60 ham có "meeting". Vắng mặt nghĩa là phần còn lại, nên dùng $1-p$:</p>
+<div class="tw"><table>
+<tr><th></th><th>Spam</th><th>Ham</th></tr>
+<tr><td>Tích từ 6.2</td><td>0.08</td><td>0.001</td></tr>
+<tr><td>meeting (vắng)</td><td>$1-\frac{2}{40}=0.95$</td><td>$1-\frac{30}{60}=0.5$</td></tr>
+<tr><td><b>Tích mới</b></td><td>$0.076$</td><td>$0.0005$</td></tr>
+</table></div>
+<p>Chuẩn hóa: $\frac{0.076}{0.0765}=99.3\%$. Công thức gom hai trường hợp (có/vắng) lại thành một: với $x_j\in\{0,1\}$ (1 = có chữ), $p_{jy}=P(\text{chữ }j\text{ xuất hiện}\mid y)$:</p>
+$$P(x_j\mid y)=p_{jy}^{\,x_j}\,(1-p_{jy})^{1-x_j}$$
+<p>Khi $x_j=1$ chỉ còn $p$, khi $x_j=0$ chỉ còn $1-p$.</p>
+<h3>6.4 Huấn luyện chỉ là đếm, và Laplace smoothing</h3>
+<p>$p_{jy}$ chính là xác suất "ngửa" của đồng xu ở Phần 3 (chữ xuất hiện = ngửa). Ước lượng đơn giản nhất là đếm: $p=\frac{c}{n_y}$ ($c$ = số email lớp $y$ có chữ đó, $n_y$ = số email lớp $y$).</p>
+<p><b>Vấn đề</b>: giả sử chữ "win" chưa từng xuất hiện trong spam lúc huấn luyện, thì $p=0/40=0$ và tích bị nhân với 0, nên <i>mọi</i> email có "win" bị coi là không thể là spam, bất kể các chữ khác. <b>Cách sửa (Laplace smoothing)</b>:</p>
+$$p_{jy}=\frac{c+1}{n_y+2}\qquad\text{ví dụ}\ \ \frac{0+1}{40+2}=0.024$$
+<p>Không phải mẹo tùy tiện: đỉnh (MAP) của $\text{Beta}(A,B)$ là $\frac{A-1}{A+B-2}$ (đã dùng ở 3.4). Với prior $\text{Beta}(2,2)$ và $c$ lần "ngửa" trong $n$ lần, posterior là $\text{Beta}(2+c,\ 2+n-c)$ nên đỉnh là $\frac{(2+c)-1}{(2+c)+(2+n-c)-2}=\frac{c+1}{n+2}$. Tức <b>Laplace smoothing = MAP với prior $\text{Beta}(2,2)$</b>, đúng prior (1 ngửa ảo, 1 sấp ảo) ở Phần 3.</p>
+<h3>6.5 Dùng log: mỗi chữ là một "phiếu bầu"</h3>
+<p>Nhân hàng trăm số nhỏ sẽ tràn số (underflow), nên lấy log. Hiệu log của hai lớp (<b>log-odds</b>) là tổng các đóng góp:</p>
+$$\ln\frac{P(S\mid x)}{P(H\mid x)}=\ln\frac{P(S)}{P(H)}+\sum_j\ln\frac{P(x_j\mid S)}{P(x_j\mid H)}$$
+<p>Bảng đầy đủ 4 chữ với Laplace smoothing ($n_S=40$, $n_H=60$), email có free, có win, vắng meeting, vắng report:</p>
+<div class="tw"><table>
+<tr><th>Chữ</th><th>Spam $p$</th><th>Ham $p$</th><th>Dùng</th><th>Đóng góp log-odds</th></tr>
+<tr><td>(prior)</td><td></td><td></td><td></td><td>$\ln(0.4/0.6)=-0.405$</td></tr>
+<tr><td>free</td><td>21/42 = 0.5000</td><td>4/62 = 0.0645</td><td>$p$ (có)</td><td>$+2.048$</td></tr>
+<tr><td>win</td><td>17/42 = 0.4048</td><td>3/62 = 0.0484</td><td>$p$ (có)</td><td>$+2.124$</td></tr>
+<tr><td>meeting</td><td>3/42 = 0.0714</td><td>31/62 = 0.5000</td><td>$1-p$ (vắng)</td><td>$+0.619$</td></tr>
+<tr><td>report</td><td>3/42 = 0.0714</td><td>25/62 = 0.4032</td><td>$1-p$ (vắng)</td><td>$+0.442$</td></tr>
+<tr><td><b>Tổng</b></td><td></td><td></td><td></td><td><b>+4.828</b></td></tr>
+</table></div>
+<p>Đổi log-odds về xác suất bằng sigmoid: $\sigma(4.828)=\frac{1}{1+e^{-4.828}}=0.992$. Đây chính là sigmoid của Logistic Regression: log-odds là tổng có trọng số của các đặc trưng. Khác biệt là Naive Bayes <b>đếm ra</b> trọng số trực tiếp (mô hình $P(x\mid y)$), còn Logistic Regression <b>học</b> trọng số bằng Gradient Descent (mô hình $P(y\mid x)$).</p>
+<h3>Hình 2: đóng góp của từng chữ</h3>
+
+<div class="tg" id="tg"></div>
+<div class="ctl"><label>Prior P(spam): <b id="prv">0.40</b><input type="range" id="pr" min="5" max="95" value="40" step="1"></label></div>
+<svg class="fig" viewBox="0 0 680 270" role="img" aria-label="Đóng góp log-odds"><g id="bars"></g></svg>
+<div class="mets">
+<div class="met"><small>Tổng log-odds</small><b id="s0"></b></div>
+<div class="met"><small>P(spam | email) = σ(tổng)</small><b id="s1"></b></div>
+<div class="met"><small>Dự đoán</small><b id="s2"></b></div>
+</div>
+
+<div class="how"><h4>Cách đọc Hình 2</h4><ul>
+<li><b>Mỗi thanh</b> là một số hạng trong tổng log-odds ở 6.5. Cam sang phải là bằng chứng nghiêng về spam, xanh lá sang trái là nghiêng về ham, xanh dương dưới cùng là tổng.</li>
+<li><b>Mặc định</b> (free: có, win: có, meeting: vắng, report: vắng) cho tổng +4.83 và xác suất spam 0.992, khớp bảng ở 6.5.</li>
+<li><b>Thử 1</b>: bấm "meeting" thành CÓ. Thanh của nó đổi từ +0.62 sang khoảng −1.95 (nghiêng ham), tổng giảm mạnh.</li>
+<li><b>Thử 2</b>: bật "meeting" và "report", tắt "free" và "win". Mọi thanh chuyển sang xanh lá, tổng âm, email bị phân loại là ham.</li>
+<li><b>Thử 3</b>: kéo prior xuống 0.05. Thanh Prior dài ra về bên trái, nhưng các chữ vẫn đủ phiếu để giữ kết quả là spam. Prior chỉ là một thanh, còn dữ liệu có nhiều thanh cộng lại.</li></ul></div>
+</section>
+
+<section id="sx7"><h2>Tóm tắt công thức, theo thứ tự đã đi</h2>
+<div class="tw"><table>
+<tr><th>Bước</th><th>Công thức</th><th>Con số tương ứng</th></tr>
+<tr><td>Bayes</td><td>$P(S\mid F)=\dfrac{P(F\mid S)\,P(S)}{P(F)}$</td><td>$\dfrac{0.5\times0.4}{0.23}=87\%$</td></tr>
+<tr><td>Mẫu số (evidence)</td><td>$P(F)=\sum P(F\mid\cdot)P(\cdot)$, chia để tổng = 100%</td><td>$0.20+0.03=0.23$</td></tr>
+<tr><td>Bỏ mẫu số</td><td>posterior $\propto$ likelihood × prior</td><td>So sánh các hàng trong bảng</td></tr>
+<tr><td>Học liên tục</td><td>posterior cũ = prior mới</td><td>3 loại đồng xu: 47% → 59%</td></tr>
+<tr><td>Likelihood nhiều lần tung</td><td>độc lập thì nhân: $\theta^h(1-\theta)^t$</td><td>$0.7\times0.7=0.49$</td></tr>
+<tr><td>Beta($a,b$)</td><td>$\theta^{a-1}(1-\theta)^{b-1}$ = niềm tin của người đã thấy $a-1$ ngửa, $b-1$ sấp</td><td>$\text{Beta}(1,1)$ phẳng; $\text{Beta}(20,20)$ chuông hẹp</td></tr>
+<tr><td>Cập nhật Beta</td><td>$\text{Beta}(a,b)\to\text{Beta}(a+h,\,b+t)$</td><td>$\text{Beta}(2,2)\to\text{Beta}(9,5)$</td></tr>
+<tr><td>Đỉnh / mean của Beta</td><td>$\frac{A-1}{A+B-2}$ / $\frac{A}{A+B}$</td><td>$\frac{8}{12}=0.667$ / $\frac{9}{14}=0.643$</td></tr>
+<tr><td>ML ↔ Bayes</td><td>$w$ là "loại đồng xu"; loss $=-\log P(D\mid w)$</td><td>Log loss = $-\ln(\text{likelihood})$</td></tr>
+<tr><td>MLE vs MAP</td><td>$\arg\max P(D\mid w)$ vs $\arg\max P(D\mid w)P(w)$</td><td>$w=3$ vs $w=1$</td></tr>
+<tr><td>L2</td><td>loss $+\,\lambda w^2$, $\lambda=1/\tau^2$ = prior Gaussian</td><td>$w=\frac{3}{1+\lambda}$</td></tr>
+<tr><td>Bayesian đầy đủ</td><td>$\sum\theta\,P(\theta\mid D)$</td><td>$0.596$ (MAP cho $0.7$)</td></tr>
+<tr><td>Naive Bayes</td><td>$P(S)\prod_j P(x_j\mid S)$</td><td>$0.4\times0.5\times0.4=0.08$</td></tr>
+<tr><td>Có/vắng</td><td>$p^{x}(1-p)^{1-x}$</td><td>Có $\to p$, vắng $\to 1-p$</td></tr>
+<tr><td>Laplace</td><td>$\frac{c+1}{n+2}$ = MAP với $\text{Beta}(2,2)$</td><td>$\frac{0+1}{40+2}=0.024$</td></tr>
+<tr><td>Log-odds</td><td>$\ln\frac{P(S)}{P(H)}+\sum_j\ln\frac{P(x_j\mid S)}{P(x_j\mid H)}$</td><td>$+4.828\to\sigma=0.992$</td></tr>
+</table></div></section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script>
+function g(i){return document.getElementById(i);}
+function lg(z){var c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.001208650973866179,-0.000005395239384953],x=z,y=z,t=x+5.5,s=1.000000000190015,j;t-=(x+0.5)*Math.log(t);for(j=0;j<6;j++){y+=1;s+=c[j]/y;}return -t+Math.log(2.5066282746310005*s/x);}
+function pdf(x,a,b){if(x<=0||x>=1)return 0;return Math.exp((a-1)*Math.log(x)+(b-1)*Math.log(1-x)+lg(a+b)-lg(a)-lg(b));}
+var X0=40,X1=640,Y0=250,Y1=60;
+function draw(){var a=+g('a').value,b=+g('b').value,h=+g('h').value,t=+g('t').value,i,N=200,P=[],L=[],O=[],mx=0;
+g('av').textContent=a;g('bv').textContent=b;g('hv').textContent=h;g('tv').textContent=t;
+for(i=0;i<=N;i++){var x=i/N;P.push(pdf(x,a,b));L.push(pdf(x,h+1,t+1));O.push(pdf(x,a+h,b+t));}
+[P,L,O].forEach(function(A){A.forEach(function(v){if(isFinite(v)&&v>mx)mx=v;});});
+function path(A){var d='';for(i=0;i<=N;i++){var v=Math.min(A[i],mx);d+=(i?'L':'M')+(X0+(X1-X0)*i/N).toFixed(1)+' '+(Y0-(Y0-Y1)*v/mx).toFixed(1);}return d;}
+g('pp').setAttribute('d',path(P));g('pl').setAttribute('d',path(L));g('po').setAttribute('d',path(O));
+var ax='<line x1="'+X0+'" y1="'+Y0+'" x2="'+X1+'" y2="'+Y0+'" stroke="#888780" stroke-width="1"/>';
+for(i=0;i<=10;i+=2){var xx=X0+(X1-X0)*i/10;ax+='<line x1="'+xx+'" y1="'+Y0+'" x2="'+xx+'" y2="'+(Y0+5)+'" stroke="#888780"/><text class="ts" x="'+xx+'" y="'+(Y0+20)+'" text-anchor="middle">'+(i/10).toFixed(1)+'</text>';}
+ax+='<text class="ts" x="'+((X0+X1)/2)+'" y="282" text-anchor="middle">θ = P(ngửa)</text>';
+g('ax').innerHTML=ax;
+var A=a+h,B=b+t,mean=A/(A+B),sd=Math.sqrt(A*B/((A+B)*(A+B)*(A+B+1)));
+g('m0').textContent='Beta('+A+','+B+')';g('m1').textContent=mean.toFixed(3);
+g('m2').textContent=(A>1&&B>1)?((A-1)/(A+B-2)).toFixed(3):'—';
+g('m3').textContent=(h+t>0)?(h/(h+t)).toFixed(3):'—';g('m4').textContent=sd.toFixed(3);}
+['a','b','h','t'].forEach(function(k){g(k).oninput=draw;});
+g('bh').onclick=function(){var e=g('h');e.value=Math.min(60,+e.value+1);draw();};
+g('bt').onclick=function(){var e=g('t');e.value=Math.min(60,+e.value+1);draw();};
+g('br').onclick=function(){g('a').value=2;g('b').value=2;g('h').value=7;g('t').value=3;draw();};
+draw();
+var W=[['free',20,3],['win',16,2],['meeting',2,30],['report',2,24]],NS=40,NH=60,on=[1,1,0,0];
+(function(){var h='';W.forEach(function(w,i){h+='<button type="button" id="nb'+i+'" style="min-width:110px"></button>';});g('tg').innerHTML=h;W.forEach(function(w,i){g('nb'+i).onclick=function(){on[i]=on[i]?0:1;draw2();};});})();
+function draw2(){var pr=+g('pr').value/100,rows=[],tot;g('prv').textContent=pr.toFixed(2);
+rows.push(['Prior',Math.log(pr/(1-pr))]);
+W.forEach(function(w,i){var ps=(w[1]+1)/(NS+2),ph=(w[2]+1)/(NH+2),c=on[i]?Math.log(ps/ph):Math.log((1-ps)/(1-ph));rows.push([w[0]+(on[i]?' (có)':' (vắng)'),c]);
+var b=g('nb'+i);b.textContent=w[0]+': '+(on[i]?'CÓ':'vắng');b.className=on[i]?'on':'';});
+tot=rows.reduce(function(s,r){return s+r[1];},0);rows.push(['Tổng',tot]);
+var cx=400,sc=24,h='<line x1="'+cx+'" y1="20" x2="'+cx+'" y2="250" stroke="#888780"/>';
+rows.forEach(function(r,k){var y=30+k*38,w=Math.abs(r[1])*sc,col=r[0]==='Tổng'?'#185FA5':(r[1]>=0?'#D85A30':'#1D9E75'),x=r[1]>=0?cx:cx-w;
+h+='<text class="ts" x="170" y="'+(y+14)+'" text-anchor="end">'+r[0]+'</text><rect x="'+x+'" y="'+y+'" width="'+Math.max(w,1)+'" height="22" rx="3" fill="'+col+'" opacity="'+(r[0]==='Tổng'?1:0.8)+'"/><text class="ts" x="'+(r[1]>=0?cx+w+6:cx-w-6)+'" y="'+(y+15)+'" text-anchor="'+(r[1]>=0?'start':'end')+'">'+(r[1]>=0?'+':'')+r[1].toFixed(2)+'</text>';});
+h+='<text class="ts" x="'+(cx+8)+'" y="264">→ spam</text><text class="ts" x="'+(cx-8)+'" y="264" text-anchor="end">ham ←</text>';
+g('bars').innerHTML=h;
+var p=1/(1+Math.exp(-tot));g('s0').textContent=(tot>=0?'+':'')+tot.toFixed(3);g('s1').textContent=p.toFixed(3);g('s2').textContent=p>=0.5?'Spam':'Ham';}
+g('pr').oninput=draw2;draw2();
+</script>
+</body>
+</html>

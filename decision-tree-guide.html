@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Tree: giải thích từng bước với ví dụ 10 record</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+canvas#cv3{width:100%;border:1px solid var(--border);border-radius:8px;display:block;background:var(--bg)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Decision Tree (Cây quyết định)</h1>
+<p>Giải thích đơn giản, tính tay từng bước trên 10 record, kèm 3 hình tương tác và cách đọc từng hình.</p>
+</div></header>
+<nav><div class="wrap">
+<a href="#s1">1. Ý tưởng</a><a href="#s2">2. Dữ liệu</a><a href="#s3">3. Gini</a><a href="#s4">4. Thử câu hỏi</a><a href="#s5">5. Lặp lại</a><a href="#s6">6. Dự đoán</a><a href="#s7">7. Overfitting</a><a href="#s9">9. Hồi quy</a><a href="#s10">10. Tóm tắt</a>
+</div></nav>
+<main class="wrap">
+
+<section id="s1"><h2>1. Ý tưởng trong 1 phút</h2>
+<p>Cây quyết định (decision tree) giống trò đoán nhân vật: mỗi câu hỏi Yes/No chia một nhóm thành hai nhóm nhỏ. Câu hỏi hay là câu làm mỗi nhóm con <b>đồng nhất hơn</b> (gần như toàn Pass hoặc toàn Fail). Cả thuật toán chỉ gồm 3 việc:</p>
+<ol>
+<li>Đo một nhóm đang "lẫn lộn" đến mức nào bằng một con số (impurity, độ lẫn).</li>
+<li>Thử nhiều câu hỏi, chọn câu làm độ lẫn <b>giảm nhiều nhất</b> (gain, phần giảm được).</li>
+<li>Lặp lại cho từng nhóm con. Nhóm nào đã đủ thuần thì dừng lại và trở thành nút lá (leaf).</li>
+</ol></section>
+
+<section id="s2"><h2>2. Dữ liệu: 10 record</h2>
+<div class="tw"><table>
+<tr><th>ID</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr>
+<tr><td>Hours</td><td>1</td><td>2</td><td>3</td><td>3.5</td><td>4</td><td>4.5</td><td>5</td><td>5.5</td><td>6</td><td>7</td></tr>
+<tr><td>Attend</td><td>N</td><td>Y</td><td>N</td><td>Y</td><td>N</td><td>Y</td><td>Y</td><td>N</td><td>Y</td><td>Y</td></tr>
+<tr><td>Result</td><td>F</td><td>F</td><td>F</td><td>P</td><td>F</td><td>P</td><td>P</td><td>P</td><td>P</td><td>P</td></tr>
+</table></div>
+<p>P = Pass (đậu), F = Fail (rớt). Cần dự đoán Result từ Hours và Attend.</p></section>
+
+<section id="s3"><h2>3. Bước 1: đo độ lẫn của một nhóm (Gini impurity)</h2>
+$$\text{Gini}=1-(p_{\text{Pass}}^2+p_{\text{Fail}}^2)$$
+<p>($p$ là tỉ lệ của mỗi lớp trong nhóm.) Ta dùng Gini cho đơn giản vì chỉ cần phép bình phương. Entropy là một cách đo khác cùng ý tưởng (có dùng logarit), cho kết quả chọn câu hỏi gần như giống nhau.</p>
+<p><b>Tính cho nhóm gốc (cả 10 record):</b></p>
+<div class="tw"><table>
+<tr><th>Việc cần làm</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>Đếm Pass</td><td>ID 4, 6, 7, 8, 9, 10</td><td>6</td></tr>
+<tr><td>Đếm Fail</td><td>ID 1, 2, 3, 5</td><td>4</td></tr>
+<tr><td>Tỉ lệ</td><td>$p_{\text{Pass}}=6/10$, $p_{\text{Fail}}=4/10$</td><td>0.6 và 0.4</td></tr>
+<tr><td>Bình phương</td><td>$0.6^2$ và $0.4^2$</td><td>0.36 và 0.16</td></tr>
+<tr><td>Cộng lại</td><td>$0.36+0.16$</td><td>0.52</td></tr>
+<tr><td>Gini</td><td>$1-0.52$</td><td><b>0.48</b></td></tr>
+</table></div>
+<p>Hai mốc để nhớ: nhóm toàn Pass có $p=1$ nên Gini $=1-1^2=0$ (thuần). Nhóm chia đôi 5/5 có Gini $=1-(0.25+0.25)=0.5$ (lẫn nhất khi có 2 lớp).</p>
+<p><b>Hình 1</b> vẽ độ lẫn theo $p$ (tỉ lệ Pass trong một nhóm), gồm Gini, entropy và misclassification (tỉ lệ đoán sai nếu chọn lớp đa số). Kéo thanh trượt để xem giá trị tại từng điểm.</p>
+
+<div class="widget">
+<h4>Hình 1: Đường độ lẫn (impurity curves)</h4>
+<div class="ctrl"><div><label>p (tỉ lệ Pass) = <b id="pv">0.60</b></label><input type="range" id="p1" min="0" max="1" step="0.01" value="0.6"></div></div>
+<div class="metrics">
+<div class="metric"><div class="l">Gini</div><div class="v" id="g1">-</div></div>
+<div class="metric"><div class="l">Entropy</div><div class="v" id="e1">-</div></div>
+<div class="metric"><div class="l">Misclassification</div><div class="v" id="m1">-</div></div>
+</div>
+<div class="chart"><canvas id="c1"></canvas></div>
+</div>
+<div class="how"><h4>Cách đọc Hình 1</h4>
+<ul>
+<li><b>Trục ngang</b> là $p$, tỉ lệ Pass trong một nhóm. <b>Trục dọc</b> là độ lẫn.</li>
+<li><b>Cách đọc:</b> kéo $p=0.6$ thì ô Gini hiện <b>0.480</b>, đúng bằng phép tính ở mục 3 (nhóm gốc 6P, 4F). Kéo $p=1$ thì cả ba số về 0 (nhóm toàn Pass). Kéo $p=0.5$ thì độ lẫn cao nhất (Gini 0.5, entropy 1).</li>
+<li><b>Điều cần rút ra:</b> cả ba đường đều có hình "ngọn núi": bằng 0 ở hai đầu (nhóm thuần), cao nhất ở giữa (nhóm trộn đều). Hình này chỉ để hiểu "độ lẫn" là gì; cây dùng nó như một chiếc thước.</li>
+</ul></div>
+</section>
+
+<section id="s4"><h2>4. Bước 2: thử một câu hỏi và chấm điểm</h2>
+<p>Thử câu hỏi <b>"Hours ≤ 4.25?"</b></p>
+<h3>4a. Mỗi record đi về đâu?</h3>
+<div class="tw"><table>
+<tr><th>ID</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th></tr>
+<tr><td>Hours</td><td>1</td><td>2</td><td>3</td><td>3.5</td><td>4</td><td>4.5</td><td>5</td><td>5.5</td><td>6</td><td>7</td></tr>
+<tr><td>Hours ≤ 4.25?</td><td>Có</td><td>Có</td><td>Có</td><td>Có</td><td>Có</td><td>Không</td><td>Không</td><td>Không</td><td>Không</td><td>Không</td></tr>
+<tr><td>Nhánh</td><td>Trái</td><td>Trái</td><td>Trái</td><td>Trái</td><td>Trái</td><td>Phải</td><td>Phải</td><td>Phải</td><td>Phải</td><td>Phải</td></tr>
+<tr><td>Result</td><td>F</td><td>F</td><td>F</td><td>P</td><td>F</td><td>P</td><td>P</td><td>P</td><td>P</td><td>P</td></tr>
+</table></div>
+<p>Nhánh trái là ID 1 đến 5 (1 Pass, 4 Fail). Nhánh phải là ID 6 đến 10 (5 Pass, 0 Fail).</p>
+<h3>4b. Gini của từng nhánh</h3>
+<div class="tw"><table>
+<tr><th>Nhánh</th><th>Đếm</th><th>Tỉ lệ</th><th>Thế số vào Gini</th><th>Kết quả</th></tr>
+<tr><td>Trái</td><td>1P, 4F</td><td>0.2 và 0.8</td><td>$1-(0.2^2+0.8^2)=1-(0.04+0.64)$</td><td>0.32</td></tr>
+<tr><td>Phải</td><td>5P, 0F</td><td>1 và 0</td><td>$1-(1^2+0^2)$</td><td>0</td></tr>
+</table></div>
+<h3>4c. Gộp hai nhánh thành một điểm</h3>
+<p>Nhánh đông record hơn thì tính nhiều hơn (giống điểm trung bình theo số tín chỉ), nên ta nhân với tỉ lệ số record:</p>
+$$\text{Gini sau khi chia}=\tfrac{5}{10}\times0.32+\tfrac{5}{10}\times0=0.16$$
+<h3>4d. Câu hỏi này giảm được bao nhiêu?</h3>
+$$\text{Gain}=0.48-0.16=\mathbf{0.32}$$
+<div class="note"><b>Vì sao phải nhân tỉ lệ?</b> Thử câu hỏi tệ <b>"Hours ≤ 1.5?"</b>: nhánh trái chỉ có ID 1 (0P, 1F), Gini $=0$. Nhánh phải là ID 2 đến 10 (6P, 3F), Gini $=1-((2/3)^2+(1/3)^2)=0.444$. Gộp: $\tfrac{1}{10}\times0+\tfrac{9}{10}\times0.444=0.4$, nên Gain $=0.48-0.4=0.08$. Nếu chỉ lấy trung bình thường thì nhánh nhỏ xíu cũng nặng bằng nhánh to, và câu hỏi tệ này sẽ trông rất tốt. Nhân theo tỉ lệ sửa được điều đó.</div>
+<h3>4e. Thử hết các câu hỏi, chọn Gain lớn nhất</h3>
+<p>Với Hours, ta chỉ cần thử các ngưỡng nằm <b>giữa hai record liền kề</b> (ví dụ giữa 4 và 4.5 là 4.25). Lý do: đặt ngưỡng ở đâu giữa hai record đó thì cách chia vẫn y hệt.</p>
+<div class="tw"><table>
+<tr><th>Câu hỏi</th><th>Gain (Gini)</th></tr>
+<tr><td>Attend = Y?</td><td>0.163</td></tr>
+<tr><td>Hours ≤ 1.5</td><td>0.080</td></tr>
+<tr><td>Hours ≤ 2.5</td><td>0.180</td></tr>
+<tr><td>Hours ≤ 3.25</td><td>0.309</td></tr>
+<tr><td>Hours ≤ 3.75</td><td>0.163</td></tr>
+<tr><td><b>Hours ≤ 4.25</b></td><td><b>0.320</b></td></tr>
+<tr><td>Hours ≤ 4.75</td><td>0.213</td></tr>
+<tr><td>Hours ≤ 5.25</td><td>0.137</td></tr>
+<tr><td>Hours ≤ 5.75</td><td>0.080</td></tr>
+<tr><td>Hours ≤ 6.5</td><td>0.036</td></tr>
+</table></div>
+<p>Thắng: <b>Hours ≤ 4.25</b>. Đây là câu hỏi ở nút gốc (root).</p>
+<p><b>Hình 2</b> cho bạn tự kéo ngưỡng và xem các con số trên thay đổi ra sao.</p>
+
+<div class="widget">
+<h4>Hình 2: Khám phá ngưỡng chia (split threshold)</h4>
+<div class="ctrl"><div><label>Ngưỡng t = <b id="tv">3.75</b></label><input type="range" id="t2" min="0.5" max="7.5" step="0.05" value="3.75"></div></div>
+<div class="btns"><button id="best2">Nhảy tới ngưỡng tốt nhất</button></div>
+<div class="metrics">
+<div class="metric"><div class="l">Nhánh trái (P, F)</div><div class="v" id="l2">-</div></div>
+<div class="metric"><div class="l">Nhánh phải (P, F)</div><div class="v" id="r2">-</div></div>
+<div class="metric"><div class="l">Weighted entropy</div><div class="v" id="we2">-</div></div>
+<div class="metric"><div class="l">Information Gain</div><div class="v" id="ig2">-</div></div>
+<div class="metric"><div class="l">Gini decrease</div><div class="v" id="gd2">-</div></div>
+</div>
+<div class="legend"><span><i style="background:#2a78d6;border-radius:50%"></i>Pass</span><span><i style="background:#e34948"></i>Fail</span><span><i style="background:#888"></i>Ngưỡng t</span></div>
+<div class="chart" style="height:160px"><canvas id="c2a"></canvas></div>
+<div class="chart" style="height:240px;margin-top:12px"><canvas id="c2b"></canvas></div>
+</div>
+<div class="how"><h4>Cách đọc Hình 2</h4>
+<ul>
+<li><b>Biểu đồ trên:</b> 10 sinh viên nằm theo trục Hours. Hàng trên là Pass (chấm tròn xanh), hàng dưới là Fail (hình thoi đỏ). Đường đứt xám là ngưỡng $t$. Bạn nào nằm bên trái đường đứt thì đi nhánh trái, bên phải thì đi nhánh phải (đúng như bảng ở mục 4a).</li>
+<li><b>Các ô số:</b> "Nhánh trái (P, F)" là số Pass và số Fail ở bên trái đường đứt. "Gini decrease" chính là Gain ở mục 4d.</li>
+<li><b>Cách đọc:</b> bấm "Nhảy tới ngưỡng tốt nhất" (hoặc kéo $t=4.25$) thì ô trái hiện (1, 4), ô phải hiện (5, 0), Gini decrease hiện <b>0.320</b>: khớp từng con số ở mục 4. Kéo $t=1.5$ thì trái (0, 1), phải (6, 3), Gini decrease chỉ <b>0.080</b>: đúng câu hỏi tệ ở mục 4.</li>
+<li><b>Biểu đồ dưới:</b> mỗi ngưỡng $t$ cho ra một điểm số (Information Gain, tương tự Gini decrease nhưng dùng entropy). Điểm cam là ngưỡng bạn đang chọn. Đỉnh cao nhất nằm trong khoảng 4 đến 4.5, tức ngưỡng tốt nhất. Đồ thị có dạng <b>bậc thang</b> vì điểm số chỉ đổi khi đường đứt đi qua một record (đúng như lý do chỉ cần thử các điểm giữa hai record ở mục 4e).</li>
+</ul></div>
+</section>
+
+<section id="s5"><h2>5. Bước 3: lặp lại cho từng nhóm con</h2>
+<ul>
+<li>Nhánh phải (ID 6 đến 10) toàn Pass, Gini $=0$, nên dừng lại và thành lá <b>Pass</b>.</li>
+<li>Nhánh trái (ID 1 đến 5) có Gini $=0.32$, vẫn còn lẫn, nên làm lại đúng quy trình trên với 5 record này. Thử "Hours ≤ 3.25?":</li>
+</ul>
+<div class="tw"><table>
+<tr><th>Nhánh</th><th>Record</th><th>Đếm</th><th>Gini</th></tr>
+<tr><td>Trái</td><td>ID 1, 2, 3</td><td>0P, 3F</td><td>0</td></tr>
+<tr><td>Phải</td><td>ID 4, 5</td><td>1P, 1F</td><td>$1-(0.5^2+0.5^2)=0.5$</td></tr>
+</table></div>
+<p>Gộp: $\tfrac{3}{5}\times0+\tfrac{2}{5}\times0.5=0.2$. Gain $=0.32-0.2=0.12$. ("Attend = Y?" cũng cho 0.12 nên hòa; chọn cái nào cũng được.)</p>
+<p>Nhánh {ID 1, 2, 3} thuần, thành lá <b>Fail</b>. Nhánh {ID 4, 5} còn lẫn (một Pass, một Fail), nên hỏi tiếp "Attend = Y?": ID 4 có Y nên Pass, ID 5 có N nên Fail, cả hai thuần. Cây hoàn chỉnh:</p>
+<pre>Hours ≤ 4.25 ?
+├─ Không → Pass
+└─ Có → Hours ≤ 3.25 ?
+        ├─ Có → Fail
+        └─ Không → Attend = Y ?
+                 ├─ Có → Pass
+                 └─ Không → Fail</pre></section>
+
+<section id="s6"><h2>6. Dự đoán cho một record mới</h2>
+<p>Sinh viên mới: <b>Hours = 3.8, Attend = Y</b>. Đi từ trên xuống:</p>
+<div class="tw"><table>
+<tr><th>Câu hỏi</th><th>Thế số</th><th>Kết quả</th><th>Đi tiếp</th></tr>
+<tr><td>Hours ≤ 4.25?</td><td>$3.8\le4.25$</td><td>Đúng</td><td>Nhánh trái</td></tr>
+<tr><td>Hours ≤ 3.25?</td><td>$3.8\le3.25$</td><td>Sai</td><td>Nhánh phải</td></tr>
+<tr><td>Attend = Y?</td><td>Attend của bạn là Y</td><td>Đúng</td><td>Lá <b>Pass</b></td></tr>
+</table></div>
+<p>Dự đoán: <b>Pass</b>. Lưu ý lá này chỉ được dựng từ <b>một</b> record (ID 4). Đó là lý do ta cần mục tiếp theo.</p></section>
+
+<section id="s7"><h2>7. Vì sao không hỏi mãi? (Overfitting)</h2>
+<p>Nếu cứ hỏi tới khi mọi lá thuần, cây sẽ "học vẹt": nhớ cả những trường hợp ngẫu nhiên (như ID 4, học 3.5 giờ mà đậu). Ta gọi đó là <b>overfitting</b> (quá khớp): giỏi trên dữ liệu đã thấy, kém trên dữ liệu mới. Cách khống chế là đặt giới hạn (hyperparameters):</p>
+<div class="tw"><table>
+<tr><th>Tham số</th><th>Nghĩa đơn giản</th></tr>
+<tr><td><code>max_depth</code></td><td>Tối đa bao nhiêu câu hỏi liên tiếp</td></tr>
+<tr><td><code>min_samples_leaf</code></td><td>Mỗi lá phải có ít nhất bấy nhiêu record</td></tr>
+<tr><td><code>min_impurity_decrease</code></td><td>Câu hỏi phải giảm độ lẫn ít nhất bấy nhiêu, không thì thôi</td></tr>
+</table></div>
+<p><b>Hình 3</b> dùng dữ liệu khác (60 sinh viên, hai đặc trưng dạng số) để bạn tự thấy cây học vẹt như thế nào khi tăng <code>max_depth</code>.</p>
+
+<div class="widget">
+<h4>Hình 3: Vùng quyết định và train vs test accuracy</h4>
+<div class="ctrl"><div><label>max_depth = <b id="dv">2</b></label><input type="range" id="d3" min="0" max="8" step="1" value="2"></div></div>
+<div class="metrics">
+<div class="metric"><div class="l">Số lá (leaves)</div><div class="v" id="m31">-</div></div>
+<div class="metric"><div class="l">Train accuracy</div><div class="v" id="m32">-</div></div>
+<div class="metric"><div class="l">Test accuracy</div><div class="v" id="m33">-</div></div>
+</div>
+<canvas id="cv3" height="320"></canvas>
+<div class="legend" style="margin-top:8px"><span><i style="background:rgba(42,120,214,.4)"></i>Vùng Pass</span><span><i style="background:rgba(227,73,72,.4)"></i>Vùng Fail</span><span>● Pass, ◆ Fail (điểm train)</span><span>Nét đứt: ranh giới thật x₁/8 + x₂/10 = 1</span></div>
+<div class="chart" style="height:240px;margin-top:12px"><canvas id="c3"></canvas></div>
+</div>
+<div class="how"><h4>Cách đọc Hình 3</h4>
+<p><b>Biểu đồ phía trên (vùng màu):</b></p>
+<ul>
+<li>Mỗi hình chữ nhật là một <b>lá (leaf)</b>. Nền xanh là dự đoán Pass, nền đỏ là Fail.</li>
+<li>Mỗi lần chia là một đường thẳng, hoặc dọc ($x_1\le t$) hoặc ngang ($x_2\le t$), nên các vùng luôn là hình chữ nhật.</li>
+<li>Đường nét đứt là ranh giới thật. Dữ liệu có 12% nhãn bị lật ngẫu nhiên (nhiễu, noise), nên có điểm Fail nằm trong vùng Pass và ngược lại, dù đó không phải "quy luật".</li>
+<li>Depth nhỏ: ít vùng, ranh giới thô nhưng gần ranh giới thật. Depth lớn: xuất hiện các hình chữ nhật nhỏ xíu bao quanh từng điểm nhiễu. Cây đang học vẹt (memorize).</li>
+</ul>
+<div class="tw"><table>
+<tr><th>max_depth</th><th>Số lá</th><th>Train acc</th><th>Test acc</th></tr>
+<tr><td>0</td><td>1</td><td>51.7%</td><td>46.8%</td></tr>
+<tr><td>1</td><td>2</td><td>71.7%</td><td>71.0%</td></tr>
+<tr><td>2</td><td>4</td><td>86.7%</td><td><b>77.7%</b> (cao nhất)</td></tr>
+<tr><td>4</td><td>12</td><td>98.3%</td><td>74.5%</td></tr>
+<tr><td>6</td><td>14</td><td>100%</td><td>73.8%</td></tr>
+</table></div>
+<p><b>Biểu đồ đường phía dưới:</b> đường xanh (train) tăng liên tục đến 100% vì cây càng sâu càng nhớ được nhiều điểm. Đường đỏ (test, 400 điểm mới) tăng đến depth 2 rồi giảm nhẹ. Khoảng cách giữa hai đường chính là <b>overfitting</b>. Bài học: chọn <code>max_depth</code> ở chỗ test cao nhất (ở đây là 2), không phải chỗ train cao nhất.</p></div>
+</section>
+
+<section id="s9"><h2>9. Cây hồi quy (Regression Tree)</h2>
+<p>Khi nhãn là số thay vì Pass/Fail, ta chỉ đổi hai thứ:</p>
+<ul>
+<li><b>Giá trị ở lá = trung bình (mean) của $y$ trong lá.</b> Lý do: tìm $c$ làm tổng bình phương sai số $\sum(y-c)^2$ nhỏ nhất. Đạo hàm theo $c$ bằng 0 cho $c=\text{mean}$.</li>
+<li><b>Độ lẫn (impurity) = phương sai (MSE quanh mean)</b>, thay cho Gini.</li>
+</ul>
+<p><b>Ví dụ:</b> $x=1,2,3,4,5,6$ và $y=2,3,2,8,9,10$.</p>
+<div class="tw"><table>
+<tr><th>Nhóm</th><th>Giá trị y</th><th>Mean</th><th>MSE</th></tr>
+<tr><td>Node cha</td><td>2, 3, 2, 8, 9, 10</td><td>34/6 = 5.667</td><td><b>11.556</b></td></tr>
+<tr><td>Trái (x ≤ 3.5)</td><td>2, 3, 2</td><td>2.333</td><td><b>0.222</b></td></tr>
+<tr><td>Phải (x &gt; 3.5)</td><td>8, 9, 10</td><td>9</td><td><b>0.667</b></td></tr>
+</table></div>
+<p>MSE có trọng số $=\tfrac{3}{6}\times0.222+\tfrac{3}{6}\times0.667=\mathbf{0.444}$. Gain $=11.556-0.444=\mathbf{11.111}$.</p>
+<p>Gain lớn vì split tách đúng hai nhóm giá trị thấp và cao. Dự đoán: $x\le3.5$ thì ra 2.33, ngược lại ra 9.</p></section>
+
+<section id="s10"><h2>10. Tóm tắt 4 dòng</h2>
+<ol>
+<li>Cây hỏi liên tiếp các câu "đặc trưng ≤ ngưỡng?" để chia dữ liệu thành các nhóm càng <b>thuần</b> càng tốt.</li>
+<li>Mỗi lần chia, thử mọi ngưỡng (trung điểm giữa các giá trị liền kề) và chọn ngưỡng có <b>Gain lớn nhất</b> (Gini giảm nhiều nhất).</li>
+<li>Không dùng Gradient Descent vì bài toán rời rạc, không có đạo hàm. Cây xây theo kiểu tham lam (greedy) từng bước.</li>
+<li>Cây sâu quá sẽ overfit, nên cần giới hạn <code>max_depth</code>, <code>min_samples_leaf</code> hoặc pruning.</li>
+</ol></section>
+</main>
+<footer><div class="wrap">Decision Tree (CART) · tiếng Việt kèm thuật ngữ tiếng Anh</div></footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+window.addEventListener('load',function(){
+  if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+});
+</script>
+<script>
+function cssv(n,f){var v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return v||f;}
+var BLUE='#2a78d6',RED='#e34948',ORG='#ef9f27';
+function H(p){return (p<=0||p>=1)?0:-p*Math.log2(p)-(1-p)*Math.log2(1-p);}
+function G(p){return 2*p*(1-p);}
+function M(p){return Math.min(p,1-p);}
+/* Hinh 1 */
+(function(){
+  var pts=function(f){var a=[];for(var i=0;i<=100;i++){a.push({x:i/100,y:f(i/100)});}return a;};
+  var ch=new Chart(document.getElementById('c1'),{type:'scatter',data:{datasets:[
+   {label:'Entropy',data:pts(H),showLine:true,pointRadius:0,borderColor:'#1d9e75',borderWidth:2},
+   {label:'Gini',data:pts(G),showLine:true,pointRadius:0,borderColor:BLUE,borderWidth:2},
+   {label:'Misclassification',data:pts(M),showLine:true,pointRadius:0,borderColor:RED,borderWidth:2},
+   {label:'p hiện tại',data:[{x:.6,y:G(.6)}],pointRadius:7,backgroundColor:ORG,borderColor:ORG}]},
+   options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{min:0,max:1,title:{display:true,text:'p (tỉ lệ Pass)'}},y:{min:0,max:1.05,title:{display:true,text:'Độ lẫn'}}}}});
+  var s=document.getElementById('p1');
+  function up(){var p=+s.value;document.getElementById('pv').textContent=p.toFixed(2);
+    document.getElementById('g1').textContent=G(p).toFixed(3);document.getElementById('e1').textContent=H(p).toFixed(3);document.getElementById('m1').textContent=M(p).toFixed(3);
+    ch.data.datasets[3].data=[{x:p,y:G(p)}];ch.update('none');}
+  s.addEventListener('input',up);up();
+})();
+/* Hinh 2 */
+(function(){
+  var X=[1,2,3,3.5,4,4.5,5,5.5,6,7],Y=[0,0,0,1,0,1,1,1,1,1];
+  function st(t){var lp=0,lf=0,rp=0,rf=0;X.forEach(function(x,i){if(x<=t){Y[i]?lp++:lf++;}else{Y[i]?rp++:rf++;}});
+    var n=10,nl=lp+lf,nr=rp+rf;
+    var pe=H(.6),pg=G(.6);
+    var we=(nl?nl/n*H(lp/nl):0)+(nr?nr/n*H(rp/nr):0);
+    var wg=(nl?nl/n*G(lp/nl):0)+(nr?nr/n*G(rp/nr):0);
+    return {lp:lp,lf:lf,rp:rp,rf:rf,we:we,ig:pe-we,gd:pg-wg};}
+  var ts=[],igs=[];for(var t=0.5;t<=7.5001;t+=0.05){ts.push(+t.toFixed(2));igs.push(st(t).ig);}
+  var strip=new Chart(document.getElementById('c2a'),{type:'scatter',data:{datasets:[
+    {label:'Pass',data:X.map(function(x,i){return Y[i]?{x:x,y:1}:null;}).filter(Boolean),pointStyle:'circle',pointRadius:7,backgroundColor:BLUE,borderColor:BLUE},
+    {label:'Fail',data:X.map(function(x,i){return Y[i]?null:{x:x,y:0};}).filter(Boolean),pointStyle:'rectRot',pointRadius:7,backgroundColor:RED,borderColor:RED},
+    {label:'t',data:[{x:3.75,y:-.4},{x:3.75,y:1.4}],showLine:true,pointRadius:0,borderColor:'#888',borderDash:[6,4],borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:8,title:{display:true,text:'Hours'}},y:{min:-.5,max:1.5,ticks:{stepSize:1,callback:function(v){return v===1?'Pass':v===0?'Fail':'';}}}}}});
+  var ig=new Chart(document.getElementById('c2b'),{type:'scatter',data:{datasets:[
+    {label:'Information Gain theo t',data:ts.map(function(t,i){return {x:t,y:igs[i]};}),showLine:true,stepped:true,pointRadius:0,borderColor:BLUE,borderWidth:2},
+    {label:'t đang chọn',data:[{x:3.75,y:0}],pointRadius:7,backgroundColor:ORG,borderColor:ORG}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{min:0,max:8,title:{display:true,text:'Ngưỡng t'}},y:{min:0,title:{display:true,text:'Information Gain'}}}}});
+  var s=document.getElementById('t2');
+  function up(){var t=+s.value,r=st(t);
+    document.getElementById('tv').textContent=t.toFixed(2);
+    document.getElementById('l2').textContent='('+r.lp+', '+r.lf+')';document.getElementById('r2').textContent='('+r.rp+', '+r.rf+')';
+    document.getElementById('we2').textContent=r.we.toFixed(3);document.getElementById('ig2').textContent=r.ig.toFixed(3);document.getElementById('gd2').textContent=r.gd.toFixed(3);
+    strip.data.datasets[2].data=[{x:t,y:-.4},{x:t,y:1.4}];strip.update('none');
+    ig.data.datasets[1].data=[{x:t,y:r.ig}];ig.update('none');}
+  s.addEventListener('input',up);
+  document.getElementById('best2').addEventListener('click',function(){s.value=4.25;up();});
+  up();
+})();
+/* Hinh 3 */
+(function(){
+var seed=12345;
+function rnd(){seed=(seed*1664525+1013904223)%4294967296;return seed/4294967296;}
+function makeData(n){var d=[];for(var i=0;i<n;i++){var a=rnd()*8,b=rnd()*10;var y=(a/8+b/10>1)?1:0;if(rnd()<0.12)y=1-y;d.push({x:[a,b],y:y});}return d;}
+function gini(c0,c1){var n=c0+c1;if(n===0)return 0;var p=c1/n;return 2*p*(1-p);}
+function build(data,idx,depth,maxD,box){
+  var c0=0,c1=0;idx.forEach(function(i){data[i].y?c1++:c0++;});
+  var node={leaf:true,pred:c1>c0?1:0,box:box};
+  if(depth>=maxD||c0===0||c1===0||idx.length<2)return node;
+  var g0=gini(c0,c1),best=null,bestW=g0-1e-12;
+  for(var f=0;f<2;f++){
+    var s=idx.slice().sort(function(a,b){return data[a].x[f]-data[b].x[f];});
+    var l0=0,l1=0;
+    for(var k=0;k<s.length-1;k++){
+      data[s[k]].y?l1++:l0++;
+      var v1=data[s[k]].x[f],v2=data[s[k+1]].x[f];
+      if(v1===v2)continue;
+      var nl=k+1,nr=s.length-nl,r0=c0-l0,r1=c1-l1;
+      var w=(nl*gini(l0,l1)+nr*gini(r0,r1))/s.length;
+      if(w<bestW){bestW=w;best={f:f,t:(v1+v2)/2};}
+    }
+  }
+  if(!best)return node;
+  var L=[],R=[];idx.forEach(function(i){(data[i].x[best.f]<=best.t?L:R).push(i);});
+  var bl=box.slice(),br=box.slice();
+  if(best.f===0){bl[2]=best.t;br[0]=best.t;}else{bl[3]=best.t;br[1]=best.t;}
+  return {leaf:false,f:best.f,t:best.t,l:build(data,L,depth+1,maxD,bl),r:build(data,R,depth+1,maxD,br),box:box};
+}
+function predict(n,x){while(!n.leaf)n=x[n.f]<=n.t?n.l:n.r;return n.pred;}
+function acc(n,d){var c=0;d.forEach(function(p){if(predict(n,p.x)===p.y)c++;});return c/d.length;}
+function leaves(n,o){o=o||[];if(n.leaf)o.push(n);else{leaves(n.l,o);leaves(n.r,o);}return o;}
+var train=makeData(60),test=makeData(400);
+var all=train.map(function(_,i){return i;});
+var trA=[],teA=[],labels=[];
+for(var D=0;D<=10;D++){var t=build(train,all,0,D,[0,0,8,10]);trA.push(+(acc(t,train)*100).toFixed(1));teA.push(+(acc(t,test)*100).toFixed(1));labels.push(D);}
+var cv=document.getElementById('cv3'),ctx=cv.getContext('2d');
+var chart=new Chart(document.getElementById('c3'),{type:'line',data:{labels:labels,datasets:[
+ {label:'Train accuracy (%)',data:trA,borderColor:BLUE,backgroundColor:BLUE,tension:0,pointRadius:3},
+ {label:'Test accuracy (%)',data:teA,borderColor:RED,backgroundColor:RED,tension:0,pointRadius:3}]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{marker:2,legend:{position:'bottom'}},scales:{x:{title:{display:true,text:'max_depth'}},y:{min:40,max:100,title:{display:true,text:'Accuracy (%)'}}}},
+ plugins:[{id:'marker',afterDraw:function(c){var D=c.options.plugins.marker;if(D==null)return;var x=c.scales.x.getPixelForValue(D),a=c.chartArea,g=c.ctx;g.save();g.strokeStyle='#888';g.setLineDash([4,4]);g.beginPath();g.moveTo(x,a.top);g.lineTo(x,a.bottom);g.stroke();g.restore();}}]});
+function draw(){
+  var D=+document.getElementById('d3').value;
+  document.getElementById('dv').textContent=D;
+  var tree=build(train,all,0,D,[0,0,8,10]),lv=leaves(tree);
+  document.getElementById('m31').textContent=lv.length;
+  document.getElementById('m32').textContent=(acc(tree,train)*100).toFixed(1)+'%';
+  document.getElementById('m33').textContent=(acc(tree,test)*100).toFixed(1)+'%';
+  var W=cv.clientWidth,Hh=320,dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=Hh*dpr;cv.style.height=Hh+'px';ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,Hh);
+  var pl=34,pb=24,pt=8,pr=8,pw=W-pl-pr,ph=Hh-pt-pb;
+  function X(a){return pl+a/8*pw;}function Y(b){return pt+ph-b/10*ph;}
+  lv.forEach(function(l){var b=l.box;ctx.fillStyle=l.pred?'rgba(42,120,214,0.22)':'rgba(227,73,72,0.22)';ctx.fillRect(X(b[0]),Y(b[3]),X(b[2])-X(b[0]),Y(b[1])-Y(b[3]));ctx.strokeStyle='rgba(120,120,120,0.45)';ctx.lineWidth=1;ctx.strokeRect(X(b[0]),Y(b[3]),X(b[2])-X(b[0]),Y(b[1])-Y(b[3]));});
+  ctx.strokeStyle='#888';ctx.setLineDash([6,4]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(X(0),Y(10));ctx.lineTo(X(8),Y(0));ctx.stroke();ctx.setLineDash([]);
+  train.forEach(function(p){var cx=X(p.x[0]),cy=Y(p.x[1]);if(p.y){ctx.fillStyle=BLUE;ctx.beginPath();ctx.arc(cx,cy,4.5,0,6.283);ctx.fill();}else{ctx.fillStyle=RED;ctx.beginPath();ctx.moveTo(cx,cy-5.5);ctx.lineTo(cx+5,cy);ctx.lineTo(cx,cy+5.5);ctx.lineTo(cx-5,cy);ctx.closePath();ctx.fill();}});
+  ctx.fillStyle=cssv('--muted','#666');ctx.font='11px sans-serif';
+  for(var a=0;a<=8;a+=2)ctx.fillText(a,X(a)-3,Hh-8);
+  for(var b=0;b<=10;b+=2)ctx.fillText(b,10,Y(b)+4);
+  chart.options.plugins.marker=D;chart.update('none');
+}
+document.getElementById('d3').addEventListener('input',draw);
+window.addEventListener('resize',draw);
+draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ví dụ thực tế: lọc spam bằng Neural Network</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Ví dụ: lọc email spam bằng Neural Network</h1><p>Từ câu chữ đến vector số, đến weight và loss: tính tay trên 1 email, rồi xem mạng học weight theo từng epoch.</p></div></header>
+<nav><div class="wrap"><a href="#s1">1. Bài toán</a><a href="#s2">2. Bag-of-words</a><a href="#s3">3. Dữ liệu</a><a href="#s4">4. Kiến trúc</a><a href="#s5">5. Tính tay</a><a href="#s6">6. Huấn luyện</a><a href="#s7">7. Tổng kết</a><a href="#s8">8. Lưu ý</a></div></nav>
+<main class="wrap">
+<section id="s1"><h2>1. Bài toán thực tế: lọc email spam</h2>
+<p>Giả sử bạn làm hộp thư và muốn máy tự đánh dấu email là <b>spam</b> hay <b>không spam (ham)</b>. Mạng nơ-ron không đọc được chữ, chỉ nhận <b>con số</b>. Vì vậy việc khó nhất không phải là tính weight, mà là <b>dịch bài toán thành toán</b>. Quy trình luôn gồm 5 bước:</p>
+<div class="tw"><table>
+<tr><th>Bước</th><th>Câu hỏi</th><th>Với bài spam</th></tr>
+<tr><td>1</td><td>Đầu ra cần dự đoán là gì?</td><td>Xác suất email là spam: $p\in(0,1)$</td></tr>
+<tr><td>2</td><td>Đầu vào biến thành vector số thế nào?</td><td>Đếm các từ khóa xuất hiện (bag-of-words)</td></tr>
+<tr><td>3</td><td>Đáp án thật (label) mã hóa ra sao?</td><td>spam $\to y=1$, ham $\to y=0$</td></tr>
+<tr><td>4</td><td>Chọn kiến trúc, activation, loss</td><td>Mạng 6-2-1, sigmoid, log loss</td></tr>
+<tr><td>5</td><td>Có dữ liệu có nhãn rồi, chạy Gradient Descent</td><td>Backprop từ phần Neural Network</td></tr>
+</table></div>
+<p>Bước 1 và 4 do <b>loại bài toán</b> quyết định. Hai lựa chọn hay gặp:</p>
+<div class="tw"><table>
+<tr><th>Loại bài toán</th><th>Neuron ra</th><th>Loss</th></tr>
+<tr><td>Phân loại 2 lớp (spam / không spam)</td><td>1 neuron sigmoid</td><td>Log loss</td></tr>
+<tr><td>Dự đoán một con số (giá nhà)</td><td>1 neuron không activation</td><td>MSE</td></tr>
+</table></div></section>
+
+<section id="s2"><h2>2. Bước 2: biến chữ thành vector (bag-of-words)</h2>
+<p>Ta chọn trước một <b>từ điển (vocabulary)</b> nhỏ gồm 6 từ, mỗi từ là một vị trí trong vector:</p>
+<div class="tw"><table>
+<tr><th>Vị trí</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+<tr><td>Từ</td><td>free</td><td>win</td><td>money</td><td>meeting</td><td>report</td><td>project</td></tr>
+</table></div>
+<p>Với mỗi email, $x_i=1$ nếu từ thứ $i$ <b>có</b> xuất hiện, $x_i=0$ nếu không. Ví dụ email "win free money" có đúng 3 từ trong từ điển:</p>
+$$x=(\underbrace{1}_{\text{free}},\underbrace{1}_{\text{win}},\underbrace{1}_{\text{money}},\underbrace{0}_{\text{meeting}},\underbrace{0}_{\text{report}},\underbrace{0}_{\text{project}})$$
+<p>Từ nào không có trong từ điển thì bị bỏ qua. Thứ tự từ cũng bị bỏ qua (cách làm đơn giản nhất). Thực tế từ điển có hàng chục nghìn từ nên $x$ là vector rất dài, nhưng nguyên lý y hệt.</p>
+<p><b>Hình 1</b> cho bạn gõ một câu bất kỳ và xem nó trở thành vector $x$ như thế nào.</p>
+<div class="widget"><h4>Hình 1: Từ câu chữ thành vector $x$</h4>
+<label style="font-size:13px;color:var(--muted)">Gõ một email ngắn (tiếng Anh):</label>
+<input type="text" id="tx" value="Win FREE money now!!!">
+<div class="btns" style="margin-top:8px"><button class="sm" data-s="win free money">win free money</button><button class="sm" data-s="meeting report">meeting report</button><button class="sm" data-s="free meeting about the project">free meeting about the project</button><button class="sm" data-s="Hello how are you">Hello how are you</button></div>
+<div class="sub">Các từ tách được (xanh = có trong từ điển, gạch ngang = bỏ qua):</div>
+<div class="chips" id="tok"></div>
+<div class="sub">Vector x (từ điển: free, win, money, meeting, report, project):</div>
+<div class="vec" id="vec"></div>
+<div id="out" style="font-size:14px"></div></div>
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li>Bấm nút "win free money": vector $x=(1,1,1,0,0,0)$, đúng ví dụ ở trên.</li>
+<li>Bấm "free meeting about the project": chỉ 3 từ khớp từ điển (free, meeting, project) nên $x=(1,0,0,1,0,1)$. Các từ "about", "the" bị gạch bỏ vì không có trong từ điển.</li>
+<li>Bấm "Hello how are you": <b>không từ nào khớp</b>, $x=(0,0,0,0,0,0)$. Với vector toàn 0, mạng chỉ còn dựa vào bias, nên đây là điểm yếu của cách mã hóa này: từ ngoài từ điển là "vô hình" đối với mạng.</li>
+<li>Ý chính: sau bước này, mọi email, dù dài hay ngắn, đều thành <b>một vector 6 số</b> có kích thước cố định, đủ để đưa vào mạng.</li></ul></div></section>
+
+<section id="s3"><h2>3. Dữ liệu huấn luyện có nhãn (9 email)</h2>
+<div class="tw"><table>
+<tr><th>ID</th><th>Email</th><th>$x$ (free, win, money, meeting, report, project)</th><th>Nhãn $y$</th></tr>
+<tr><td>1</td><td>win free money</td><td>(1,1,1,0,0,0)</td><td>1 (spam)</td></tr>
+<tr><td>2</td><td>free money</td><td>(1,0,1,0,0,0)</td><td>1</td></tr>
+<tr><td>3</td><td>free win</td><td>(1,1,0,0,0,0)</td><td>1</td></tr>
+<tr><td>4</td><td>win money</td><td>(0,1,1,0,0,0)</td><td>1</td></tr>
+<tr><td>5</td><td>money report</td><td>(0,0,1,0,1,0)</td><td>0 (ham)</td></tr>
+<tr><td>6</td><td>meeting report</td><td>(0,0,0,1,1,0)</td><td>0</td></tr>
+<tr><td>7</td><td>project meeting</td><td>(0,0,0,1,0,1)</td><td>0</td></tr>
+<tr><td>8</td><td>report project</td><td>(0,0,0,0,1,1)</td><td>0</td></tr>
+<tr><td>9</td><td>free meeting</td><td>(1,0,0,1,0,0)</td><td>0</td></tr>
+</table></div>
+<p>Hai email cố ý "khó": ID 5 có từ money và ID 9 có từ free nhưng vẫn là ham. Nghĩa là không từ nào đơn lẻ quyết định hết; mạng phải cân nhắc.</p></section>
+
+<section id="s4"><h2>4. Bước 4: chọn kiến trúc và đếm tham số</h2>
+<p>Mạng <b>6-2-1</b>: 6 đầu vào (một cho mỗi từ), 2 neuron ẩn, 1 neuron ra, tất cả dùng sigmoid. Đây chính là mạng 2-2-1 ở phần Neural Network, chỉ khác là đầu vào có 6 số thay vì 2. Số tham số cần học:</p>
+<ul><li>Lớp ẩn: $6\times2=12$ weight $+\ 2$ bias $=14$</li><li>Lớp ra: $2$ weight $+\ 1$ bias $=3$</li><li><b>Tổng: 17 tham số</b> (hàm cần tối ưu có 17 "nút vặn").</li></ul>
+<p>Loss trên cả tập là trung bình log loss: $J=\frac19\sum_{k=1}^{9}L_k$ với $L_k=-[y_k\ln p_k+(1-y_k)\ln(1-p_k)]$.</p></section>
+
+<section id="s5"><h2>5. Tính tay trên 1 email (ID 1: "win free money", $y=1$)</h2>
+<p>Weight khởi tạo (số nhỏ tùy ý, không được toàn bằng nhau):</p>
+<div class="tw"><table>
+<tr><th>Neuron</th><th>weight cho (free, win, money, meeting, report, project)</th><th>bias</th></tr>
+<tr><td>Ẩn 1</td><td>0.2, 0.1, 0.3, −0.1, 0.0, −0.2</td><td>0.0</td></tr>
+<tr><td>Ẩn 2</td><td>−0.1, 0.4, 0.2, 0.3, −0.2, 0.1</td><td>0.2</td></tr>
+<tr><td>Ra</td><td>$v_1=0.5,\ v_2=-0.3$</td><td>$c=0$</td></tr>
+</table></div>
+<p><b>Forward:</b> vì $x=(1,1,1,0,0,0)$, ba từ cuối bị nhân với 0 nên không đóng góp.</p>
+<div class="tw"><table>
+<tr><th>Bước</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>$z_1$</td><td>$0.2\cdot1+0.1\cdot1+0.3\cdot1+0$</td><td>0.6</td></tr>
+<tr><td>$a_1=\sigma(0.6)$</td><td></td><td><b>0.646</b></td></tr>
+<tr><td>$z_2$</td><td>$-0.1+0.4+0.2+0.2$</td><td>0.7</td></tr>
+<tr><td>$a_2=\sigma(0.7)$</td><td></td><td><b>0.668</b></td></tr>
+<tr><td>$z_{\text{out}}$</td><td>$0.5\cdot0.646-0.3\cdot0.668+0$</td><td>0.122</td></tr>
+<tr><td>$p=\sigma(0.122)$</td><td></td><td><b>0.531</b></td></tr>
+<tr><td>$L=-\ln p$</td><td>$-\ln0.531$</td><td><b>0.634</b></td></tr>
+</table></div>
+<p>Mạng mới chỉ đoán "53% là spam", còn nhãn thật là spam (1), nên còn lưỡng lự.</p>
+<p><b>Backward</b> (dùng đúng công thức mục 4 của phần Neural Network):</p>
+<div class="tw"><table>
+<tr><th>Đại lượng</th><th>Thế số</th><th>Kết quả</th></tr>
+<tr><td>$\delta^{(2)}=p-y$</td><td>$0.531-1$</td><td>−0.469</td></tr>
+<tr><td>$\partial L/\partial v_1,\ \partial L/\partial v_2,\ \partial L/\partial c$</td><td>$\delta^{(2)}a_1,\ \delta^{(2)}a_2,\ \delta^{(2)}$</td><td>−0.303, −0.314, −0.469</td></tr>
+<tr><td>$\delta^{(1)}_1$</td><td>$-0.469\times0.5\times0.646(1-0.646)$</td><td>−0.0537</td></tr>
+<tr><td>$\delta^{(1)}_2$</td><td>$-0.469\times(-0.3)\times0.668(1-0.668)$</td><td>+0.0312</td></tr>
+<tr><td>Gradient weight ẩn 1 của free, win, money</td><td>$\delta^{(1)}_1\times x_i=-0.0537\times1$</td><td>−0.0537 (mỗi từ)</td></tr>
+<tr><td>Gradient weight ẩn 1 của meeting, report, project</td><td>$\delta^{(1)}_1\times0$</td><td><b>0</b></td></tr>
+</table></div>
+<div class="note">Điểm hay: <b>từ nào không xuất hiện ($x_i=0$) thì weight của nó không bị đổi</b> trong lần cập nhật này. Mạng chỉ sửa những weight mà email này "chạm vào".</div>
+<p><b>Cập nhật với $\alpha=0.5$</b> (ví dụ weight free ở ẩn 1: $0.2-0.5\times(-0.0537)=0.227$):</p>
+<div class="tw"><table>
+<tr><th>Tham số</th><th>Trước</th><th>Sau</th></tr>
+<tr><td>Ẩn 1: free, win, money, bias</td><td>0.2, 0.1, 0.3, 0</td><td>0.227, 0.127, 0.327, 0.027</td></tr>
+<tr><td>Ẩn 2: free, win, money, bias</td><td>−0.1, 0.4, 0.2, 0.2</td><td>−0.116, 0.384, 0.184, 0.184</td></tr>
+<tr><td>$v_1,v_2,c$</td><td>0.5, −0.3, 0</td><td>0.652, −0.143, 0.235</td></tr>
+</table></div>
+<p>Forward lại: $p=0.640$ và $L=0.445$ (giảm từ 0.634). Mạng chắc chắn hơn rằng email này là spam.</p></section>
+
+<section id="s6"><h2>6. Huấn luyện trên cả 9 email</h2>
+<p>Mỗi epoch, ta tính gradient cho cả 9 email rồi lấy <b>trung bình</b> (vì $J$ là trung bình), sau đó cập nhật một lần. Các email khác nhau sẽ "kéo" weight theo những hướng khác nhau: ID 1 đẩy weight của "money" lên, nhưng ID 5 (ham, có money) lại kéo xuống. Kết quả cuối là sự cân bằng giữa chúng.</p>
+<p><b>Hình 2</b> chạy đúng quá trình này (6-2-1, cùng weight khởi tạo như bảng ở mục 5, $\alpha=0.5$ mặc định). Kéo thanh trượt epoch để xem 12 weight của lớp ẩn thay đổi ra sao, và bảng 9 email cho biết mạng đoán đúng hay sai ở từng epoch. Bạn cũng có thể tick các từ để tạo email của riêng mình và xem dự đoán.</p>
+<div class="widget"><h4>Hình 2: Bộ lọc spam học weight theo từng epoch</h4>
+<div class="ctrl"><div><label>Epoch = <b id="ev">0</b></label><input type="range" id="e" min="0" max="300" step="1" value="0"></div>
+<div><label>α (learning rate) = <b id="av">0.5</b></label><input type="range" id="a" min="0.1" max="3" step="0.1" value="0.5"></div></div>
+<div class="btns"><button id="play">▶ Chạy tự động</button></div>
+<div class="metrics"><div class="metric"><div class="l">Epoch</div><div class="v" id="m0">0</div></div><div class="metric"><div class="l">Loss J</div><div class="v" id="m1">-</div></div><div class="metric"><div class="l">Đúng / 9 email</div><div class="v" id="m2">-</div></div></div>
+<div class="sub">Weight lớp ẩn theo từng từ (cột xanh = neuron ẩn 1, cột cam = neuron ẩn 2)</div>
+<div class="chart" style="height:240px"><canvas id="cb"></canvas></div>
+<div class="box" id="oth"></div>
+<div class="sub">9 email huấn luyện: mạng đang đoán thế nào?</div>
+<div class="tw"><table id="tb"></table></div>
+<div class="sub">Tự tạo email: tick các từ có trong email</div>
+<div class="box" id="tst"></div>
+<div class="sub">Loss J theo epoch</div>
+<div class="chart" style="height:200px"><canvas id="cl"></canvas></div></div>
+<div class="how"><h4>Cách đọc Hình 2</h4><ul>
+<li><b>Biểu đồ cột:</b> mỗi từ có 2 cột, là weight của từ đó đi vào neuron ẩn 1 (xanh) và ẩn 2 (cam). Cột dương nghĩa là từ đó đẩy neuron lên, cột âm nghĩa là kéo xuống. Dòng bên dưới là bias và weight lớp ra ($v_1,v_2,c$).</li>
+<li><b>Bảng 9 email:</b> cột $p$ là xác suất spam mạng đang đoán, cột cuối cho biết đúng (✓) hay sai (✗) so với nhãn thật.</li>
+<li><b>Epoch 0:</b> weight đúng bảng khởi tạo ở mục 5, mạng mới đúng <b>4/9</b> email, $J=0.689$ (gần $\ln2=0.693$, tức đoán mò 50/50).</li>
+<li><b>Kéo dần epoch:</b> epoch 10: $J\approx0.663$, mới đúng 5/9 (giai đoạn đầu học chậm vì mọi weight còn nhỏ). Epoch 50: $J\approx0.434$, đã đúng <b>9/9</b>. Epoch 300: $J\approx0.026$.</li>
+<li><b>Chuyện gì xảy ra với weight:</b> Neuron ẩn 1 trở thành "bộ phát hiện spam": weight của free (+1.22), win (+2.06), money (+1.25) dương, còn meeting (−2.21), report (−2.24), project (−0.91) âm. Neuron ẩn 2 học theo chiều ngược lại ("bộ phát hiện email công việc"): meeting (+1.87), report (+1.55), project (+0.71) dương, free/win/money âm. Lớp ra có $v_2$ âm nên khi neuron này sáng lên thì điểm spam giảm. Không ai bảo mạng "win là từ spam"; nó tự tìm ra chỉ từ việc giảm loss.</li>
+<li><b>Phần tự tạo email:</b> mặc định tick free, win, money (chính là email ID 1), ở epoch 300 cho $p\approx0.99$. Chỉ tick "money": $p\approx0.71$ (nghiêng về spam nhưng không chắc, vì money xuất hiện ở cả spam lẫn ham). Tick free + money + meeting: $p\approx0.23$, nghiêng về ham vì "meeting" kéo xuống mạnh. Tick free + win + project: $p\approx0.95$, spam, dù email này <b>không có trong tập huấn luyện</b>.</li></ul></div></section>
+
+<section id="s7"><h2>7. Tổng kết: công thức biến một vấn đề thực thành toán</h2>
+<div class="tw"><table>
+<tr><th>Việc cần làm</th><th>Với spam</th><th>Với giá nhà (hồi quy)</th><th>Với nhận diện chữ số</th></tr>
+<tr><td>Đầu vào $x$</td><td>Đếm từ khóa (vector 6 số)</td><td>Diện tích, số phòng, khoảng cách... (nên chuẩn hóa về cùng thang đo, feature scaling)</td><td>Ảnh 28×28 thành vector 784 số điểm ảnh</td></tr>
+<tr><td>Đầu ra</td><td>1 xác suất, sigmoid</td><td>1 con số, không activation</td><td>10 xác suất (cần softmax)</td></tr>
+<tr><td>Nhãn</td><td>0/1</td><td>Giá thật</td><td>Chữ số 0–9</td></tr>
+<tr><td>Loss</td><td>Log loss</td><td>MSE</td><td>Cross-entropy (mở rộng của log loss)</td></tr>
+<tr><td>Phần tối ưu</td><td colspan="3">Giống hệt: forward, backprop, Gradient Descent</td></tr>
+</table></div>
+<p>Cái khác nhau giữa các bài toán chỉ nằm ở <b>đầu vào, đầu ra, loss</b>; phần backprop và cập nhật weight luôn giống nhau.</p></section>
+
+<section id="s8"><h2>8. Lưu ý khi áp dụng thật (ví dụ này là đồ chơi)</h2>
+<ul>
+<li><b>9 email là quá ít.</b> Đúng 9/9 trên dữ liệu đã học không chứng minh mạng giỏi với email mới. Thực tế cần hàng nghìn email và chia thành train / validation / test để kiểm tra overfitting.</li>
+<li><b>Cách mã hóa quyết định giới hạn của mô hình.</b> Bag-of-words bỏ qua thứ tự từ và từ lạ. Thực tế dùng cách mã hóa tốt hơn (TF-IDF, embedding).</li>
+<li><b>Với văn bản, đôi khi mô hình tuyến tính (Logistic Regression) đã đủ tốt.</b> Neural network đáng dùng khi có tương tác phức tạp giữa các đặc trưng, nên hãy thử mô hình đơn giản làm mốc so sánh trước.</li></ul></section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script>
+var BLUE='#2a78d6',RED='#e34948',ORG='#ef9f27';
+var sg=function(z){return 1/(1+Math.exp(-z));};
+var V=['free','win','money','meeting','report','project'];
+/* Hinh 1 */
+(function(){
+ function up(){var s=document.getElementById('tx').value.toLowerCase();var toks=s.split(/[^a-z]+/).filter(Boolean);
+ var x=V.map(function(w){return toks.indexOf(w)>=0?1:0;});
+ document.getElementById('tok').innerHTML=toks.length?toks.map(function(t){return '<span class="chip '+(V.indexOf(t)>=0?'hit':'miss')+'">'+t+'</span>';}).join(''):'<span class="chip">(trống)</span>';
+ document.getElementById('vec').innerHTML=V.map(function(w,i){return '<div class="cell '+(x[i]?'on':'')+'"><small>'+w+'</small><b>'+x[i]+'</b></div>';}).join('');
+ document.getElementById('out').textContent='x = ('+x.join(', ')+')   →   có '+x.reduce(function(a,b){return a+b;},0)+' từ khóa trong từ điển';}
+ document.getElementById('tx').addEventListener('input',up);
+ Array.prototype.forEach.call(document.querySelectorAll('button[data-s]'),function(b){b.onclick=function(){document.getElementById('tx').value=b.dataset.s;up();};});
+ up();
+})();
+/* Hinh 2 */
+(function(){
+var D=[['win free money',[1,1,1,0,0,0],1],['free money',[1,0,1,0,0,0],1],['free win',[1,1,0,0,0,0],1],['win money',[0,1,1,0,0,0],1],
+['money report',[0,0,1,0,1,0],0],['meeting report',[0,0,0,1,1,0],0],['project meeting',[0,0,0,1,0,1],0],['report project',[0,0,0,0,1,1],0],['free meeting',[1,0,0,1,0,0],0]];
+var NE=300;
+function init(){return {W:[[0.2,0.1,0.3,-0.1,0,-0.2],[-0.1,0.4,0.2,0.3,-0.2,0.1]],b:[0,0.2],v:[0.5,-0.3],c:0};}
+function cl(P){return {W:[P.W[0].slice(),P.W[1].slice()],b:P.b.slice(),v:P.v.slice(),c:P.c};}
+function fwd(P,x){var a=[0,0];for(var j=0;j<2;j++){var z=P.b[j];for(var i=0;i<6;i++)z+=P.W[j][i]*x[i];a[j]=sg(z);}return {a:a,p:sg(P.v[0]*a[0]+P.v[1]*a[1]+P.c)};}
+function stat(P){var L=0,ok=0;D.forEach(function(d){var p=fwd(P,d[1]).p;L+=-(d[2]*Math.log(p)+(1-d[2])*Math.log(1-p));if((p>.5?1:0)===d[2])ok++;});return {L:L/D.length,ok:ok};}
+function stepP(P,al){var gW=[[0,0,0,0,0,0],[0,0,0,0,0,0]],gb=[0,0],gv=[0,0],gc=0;
+ D.forEach(function(d){var f=fwd(P,d[1]),d2=f.p-d[2];gc+=d2;for(var j=0;j<2;j++){gv[j]+=d2*f.a[j];var d1=d2*P.v[j]*f.a[j]*(1-f.a[j]);gb[j]+=d1;for(var i=0;i<6;i++)gW[j][i]+=d1*d[1][i];}});
+ var Q=cl(P),n=D.length;for(var j=0;j<2;j++){Q.v[j]-=al*gv[j]/n;Q.b[j]-=al*gb[j]/n;for(var i=0;i<6;i++)Q.W[j][i]-=al*gW[j][i]/n;}Q.c-=al*gc/n;return Q;}
+var S=[];function build(){var al=+document.getElementById('a').value;S=[init()];for(var k=0;k<NE;k++)S.push(stepP(S[k],al));}
+var bar=new Chart(document.getElementById('cb'),{type:'bar',data:{labels:V,datasets:[{label:'Ẩn 1',data:[],backgroundColor:BLUE},{label:'Ẩn 2',data:[],backgroundColor:ORG}]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{y:{suggestedMin:-3,suggestedMax:3,title:{display:true,text:'weight'}}}}});
+var lc=new Chart(document.getElementById('cl'),{type:'line',data:{labels:[],datasets:[{label:'Loss J',data:[],borderColor:RED,pointRadius:0,borderWidth:2},{label:'Epoch đang xem',data:[],showLine:false,pointRadius:6,backgroundColor:ORG,borderColor:ORG}]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:'bottom'}},scales:{x:{ticks:{maxTicksLimit:10},title:{display:true,text:'Epoch'}},y:{min:0,title:{display:true,text:'J'}}}}});
+document.getElementById('tst').innerHTML=V.map(function(w,i){return '<label><input type="checkbox" class="ck" data-i="'+i+'"'+(i<3?' checked':'')+'> '+w+'</label>';}).join('')+'<div id="res" style="margin-top:8px"></div>';
+Array.prototype.forEach.call(document.querySelectorAll('.ck'),function(c){c.onchange=draw;});
+function f2(v){return (v<0?'−':'')+Math.abs(v).toFixed(2);}
+function draw(){
+ var k=+document.getElementById('e').value,P=S[k],st=stat(P);
+ document.getElementById('ev').textContent=k;document.getElementById('m0').textContent=k;document.getElementById('av').textContent=(+document.getElementById('a').value).toFixed(1);
+ document.getElementById('m1').textContent=st.L.toFixed(3);document.getElementById('m2').textContent=st.ok+' / 9';
+ bar.data.datasets[0].data=P.W[0].slice();bar.data.datasets[1].data=P.W[1].slice();bar.update('none');
+ document.getElementById('oth').innerHTML='Bias lớp ẩn: b₁ = <b>'+f2(P.b[0])+'</b>, b₂ = <b>'+f2(P.b[1])+'</b> &nbsp;|&nbsp; Lớp ra: v₁ = <b>'+f2(P.v[0])+'</b>, v₂ = <b>'+f2(P.v[1])+'</b>, c = <b>'+f2(P.c)+'</b>';
+ var h='<tr><th>ID</th><th>Email</th><th>Nhãn thật</th><th>p (xác suất spam)</th><th>Đoán</th></tr>';
+ D.forEach(function(d,i){var p=fwd(P,d[1]).p,pr=p>.5?1:0,ok=pr===d[2];h+='<tr><td>'+(i+1)+'</td><td>'+d[0]+'</td><td>'+(d[2]?'spam':'ham')+'</td><td>'+p.toFixed(3)+'</td><td class="'+(ok?'okc':'badc')+'">'+(pr?'spam':'ham')+' '+(ok?'✓':'✗')+'</td></tr>';});
+ document.getElementById('tb').innerHTML=h;
+ var x=[];Array.prototype.forEach.call(document.querySelectorAll('.ck'),function(c){x.push(c.checked?1:0);});
+ var f=fwd(P,x);document.getElementById('res').innerHTML='x = ('+x.join(', ')+') → a₁ = '+f.a[0].toFixed(3)+', a₂ = '+f.a[1].toFixed(3)+' → <b>p(spam) = '+f.p.toFixed(3)+'</b> → '+(f.p>.5?'<b class="badc">SPAM</b>':'<b class="okc">không spam</b>');
+ lc.data.datasets[1].data=[{x:k,y:st.L}];lc.update('none');
+}
+function recompute(){build();lc.data.labels=S.map(function(_,i){return i;});lc.data.datasets[0].data=S.map(function(P){return stat(P).L;});draw();}
+document.getElementById('e').addEventListener('input',draw);
+document.getElementById('a').addEventListener('input',recompute);
+var timer=null;
+document.getElementById('play').onclick=function(){var b=this;if(timer){clearInterval(timer);timer=null;b.textContent='▶ Chạy tự động';return;}
+ var e=document.getElementById('e');if(+e.value>=NE)e.value=0;b.textContent='⏸ Dừng';
+ timer=setInterval(function(){if(+e.value>=NE){clearInterval(timer);timer=null;b.textContent='▶ Chạy tự động';return;}e.value=Math.min(NE,+e.value+2);draw();},60);};
+recompute();
+})();
+</script>
+</body>
+</html>
