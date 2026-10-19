@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Random Forest cho người mới học Decision Tree</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+:root{
+  --bg:#ffffff;--surface:#f6f5f1;--text:#1c1c1a;--muted:#5f5e5a;--border:#dedcd3;
+  --accent:#185fa5;--accent-bg:#e6f1fb;--warn-bg:#faeeda;--warn-text:#633806;--ok-bg:#eaf3de;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#1a1a19;--surface:#242422;--text:#f0efec;--muted:#b4b2a9;--border:#383835;
+    --accent:#85b7eb;--accent-bg:#0c447c;--warn-bg:#633806;--warn-text:#faeeda;--ok-bg:#27500a;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+header{padding:48px 20px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+header .wrap{padding:0}
+h1{font-size:28px;font-weight:600;margin:0 0 8px;line-height:1.3}
+header p{margin:0;color:var(--muted)}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:10}
+nav .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px 20px}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;padding:6px 12px;border-radius:8px}
+nav a:hover{background:var(--surface);color:var(--text)}
+main{padding:24px 0 80px}
+section{margin-top:48px}
+h2{font-size:22px;font-weight:600;margin:0 0 12px;padding-top:8px}
+h3{font-size:18px;font-weight:600;margin:28px 0 8px}
+p{margin:0 0 12px}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;background:var(--surface);padding:1px 6px;border-radius:4px}
+.tw{overflow-x:auto;margin:12px 0 16px;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--surface);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.note{background:var(--accent-bg);color:var(--text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.warn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 16px;margin:16px 0}
+.derive{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin:16px 0}
+.derive .tag{display:inline-block;font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;letter-spacing:.02em}
+.derive p:last-child{margin-bottom:0}
+.step{margin:0 0 6px;font-weight:600}
+.widget{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0}
+.widget h4{margin:0 0 12px;font-size:16px;font-weight:600}
+.ctrl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:12px}
+.ctrl label{font-size:14px;color:var(--muted);display:block}
+.ctrl label b{color:var(--text);font-weight:600}
+input[type=range]{width:100%}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:12px}
+.metric{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.metric .l{font-size:12px;color:var(--muted)}
+.metric .v{font-size:22px;font-weight:600}
+button{font:inherit;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+button:hover{background:var(--surface);border-color:var(--muted)}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px}
+.chart{position:relative;width:100%;height:320px}
+.katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+footer{border-top:1px solid var(--border);padding:24px 0;color:var(--muted);font-size:14px}
+
+pre{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;overflow-x:auto;font-size:14px;line-height:1.5}
+.how{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:16px 0}
+.how h4{margin:0 0 6px;font-size:16px}
+.how ul{margin:6px 0}
+canvas.sq{width:100%;max-width:420px;aspect-ratio:1;border:1px solid var(--border);border-radius:8px;display:block}
+.lg2{font-size:12px;color:var(--muted);margin:6px 0 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:3px 10px;border-radius:999px;font-size:13px;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.chip.hit{background:var(--accent-bg);color:var(--text);border-color:transparent}
+.chip.miss{background:var(--warn-bg);color:var(--warn-text);text-decoration:line-through;border-color:transparent}
+.vec{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px}
+.cell{border-radius:8px;padding:8px 4px;text-align:center;background:var(--bg);border:1px solid var(--border)}
+.cell small{display:block;font-size:11px;color:var(--muted)}
+.cell b{display:block;font-size:22px;font-weight:600}
+.cell.on{background:var(--accent-bg);border-color:transparent}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:14px}
+.box label{margin-right:12px;white-space:nowrap;color:var(--text)}
+.sub{font-size:14px;font-weight:600;margin:14px 0 4px}
+input[type=text]{width:100%;font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text)}
+.okc{color:#1d9e75;font-weight:600}.badc{color:#e34948;font-weight:600}
+svg text{font-family:inherit}
+.lbl{paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+.btns button.sm{font-size:13px;padding:4px 10px}
+:root{--surface-1:var(--bg);--surface-2:var(--surface);--text-primary:var(--text);--text-secondary:var(--muted);--text-muted:var(--muted);--border-strong:var(--muted)}
+.fig{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin:14px 0}
+.fig select,.fig button{font:inherit;font-size:13px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+.fig input[type=range]{width:100%}
+.fig td{padding:2px 4px}
+:root{--color-background-secondary:var(--bg);--color-text-primary:var(--text);--color-text-secondary:var(--muted);--color-border-secondary:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Random Forest cho người mới học</h1><p>Giải thích từ đầu, chỉ cần biết Decision Tree: variance, ρ, Bootstrap, Bagging, chọn feature (ví dụ rượu vang), OOB và 3 hình tương tác.</p></div></header>
+<nav><div class="wrap"><a href="#p1">1. Điểm yếu</a><a href="#p2">2. Ý tưởng</a><a href="#p3">3. Variance, ρ</a><a href="#p4">4. Bagging</a><a href="#p5">5. Chọn feature</a><a href="#p6">6. Dự đoán, OOB</a><a href="#p7">7. Ví dụ thật</a><a href="#p9">Tổng kết</a></div></nav>
+<main class="wrap"><section id="p0"><h2>Mở đầu: bài này giả định bạn biết gì?</h2>
+<p>Chỉ giả định bạn đã biết <b>Decision Tree</b> (node, câu hỏi dạng "feature ≤ ngưỡng", chọn chia theo Gini). Mọi khái niệm khác (variance, tương quan, bootstrap...) được định nghĩa ngay khi dùng tới, mỗi bước có ví dụ số.</p>
+<div class="box"><b>Lộ trình:</b>
+<ol><li>Điểm yếu của một cây (cây "thuộc lòng" dữ liệu).</li>
+<li>Ý tưởng: hỏi nhiều cây rồi gộp lại, và điều kiện để cách này hiệu quả.</li>
+<li>Variance và tương quan ρ: hai khái niệm quyết định rừng có tốt không.</li>
+<li>Bootstrap và Bagging: làm các cây khác nhau về <b>dữ liệu</b>.</li>
+<li>Chọn feature ngẫu nhiên: làm các cây khác nhau về <b>câu hỏi</b> (ví dụ rượu vang thật).</li>
+<li>Dùng rừng: dự đoán, OOB, độ quan trọng feature, ví dụ thật, tham số.</li></ol></div>
+</section>
+
+<section id="p1"><h2>Phần 1. Điểm yếu của một Decision Tree</h2>
+<p>Khi cho cây mọc hết cỡ, nó chia dữ liệu cho tới khi mỗi lá chỉ chứa một lớp. Nghĩa là cây có thể <b>thuộc lòng</b> từng dòng dữ liệu. Điều này tốt khi nhìn vào tập train (cây không sai dòng nào) nhưng xấu với dữ liệu mới.</p>
+<p><b>Ví dụ: 10 khách hàng, dự đoán "có mua xe không"</b> (dữ liệu giả lập có nhiễu):</p>
+<div class="tw"><table>
+<tr><th>#</th><th>Tuổi</th><th>Thu nhập (triệu/tháng)</th><th>Mua?</th></tr>
+<tr><td>1</td><td>44</td><td>17</td><td>0</td></tr><tr><td>2</td><td>48</td><td>20</td><td>1</td></tr>
+<tr><td>3</td><td>20</td><td>26</td><td>1</td></tr><tr><td>4</td><td>49</td><td>21</td><td>0</td></tr>
+<tr><td>5</td><td>36</td><td>12</td><td>0</td></tr><tr><td>6</td><td>38</td><td>9</td><td>0</td></tr>
+<tr><td>7</td><td>42</td><td>8</td><td>0</td></tr><tr><td>8</td><td>30</td><td>9</td><td>0</td></tr>
+<tr><td>9</td><td>55</td><td>12</td><td>0</td></tr><tr><td>10</td><td>21</td><td>40</td><td>0</td></tr>
+</table></div>
+<p>Cây mọc hết cỡ trên cả 10 dòng bắt đầu bằng câu hỏi <b>"Tuổi ≤ 20.5?"</b> (chỉ để tách riêng khách #3, tuổi 20), rồi chia theo tuổi vài lần nữa cho tới khi thuần.</p>
+<p>Giờ <b>xoá đúng một dòng</b>, khách #3, rồi huấn luyện lại. Cây mới bắt đầu bằng câu hỏi hoàn toàn khác: <b>"Thu nhập ≤ 18.5?"</b>, và có một nhánh "thu nhập từ 18.5 đến 20.5 thì mua" chỉ dựa vào đúng một khách (#2).</p>
+<p>Nhờ hai cây dự đoán cho một người mới: <b>36 tuổi, thu nhập 20 triệu</b>.</p>
+<ul><li>Cây có khách #3: dự đoán <b>không mua</b> (0).</li><li>Cây không có khách #3: dự đoán <b>mua</b> (1).</li></ul>
+<p>Chỉ đổi một dòng dữ liệu mà câu hỏi gốc và dự đoán đều đổi. Cây quá "nhạy" với dữ liệu train: đó là <b>variance cao</b> (mục 3 định nghĩa chính xác) hay <b>overfitting</b>, vì cây học cả những dòng ngẫu nhiên (nhiễu) chứ không chỉ quy luật thật.</p>
+<div class="box">Ghi nhớ: cây sâu có <b>bias thấp</b> (đủ linh hoạt để khớp mọi thứ) nhưng <b>variance cao</b> (đổi dữ liệu một chút là đổi cây).</div>
+</section>
+
+<section id="p2"><h2>Phần 2. Ý tưởng: hỏi nhiều cây rồi gộp lại</h2>
+<p>Đoán giá một căn nhà (giá thật là 100). Năm người, mỗi người đoán lệch một ít: 90, 120, 105, 85, 100.</p>
+$$\text{trung bình}=\frac{90+120+105+85+100}{5}=100$$
+<p>Từng người lệch tới 20 nhưng trung bình gần như đúng, vì người đoán cao bù cho người đoán thấp. <b>Random Forest làm đúng như vậy:</b> huấn luyện nhiều cây, rồi gộp kết quả (phân loại thì bỏ phiếu, hồi quy thì lấy trung bình).</p>
+<p><b>Nhưng có một điều kiện.</b> Nếu cả 5 người đều nghe cùng một tin đồn rồi cùng đoán 120 thì trung bình vẫn là 120. Gộp chỉ giúp khi các cây <b>không mắc cùng một lỗi</b>. Muốn nói chính xác điều đó, ta cần hai khái niệm: <b>variance</b> và <b>tương quan ρ</b>.</p>
+</section>
+
+<section id="p3"><h2>Phần 3. Variance và tương quan ρ</h2>
+<h3>3.1 Variance là gì? Một ví dụ có số</h3>
+<p><b>Variance của dự đoán</b> trả lời câu hỏi: <i>"nếu huấn luyện lại thuật toán trên một bộ dữ liệu train khác (cùng nguồn gốc), dự đoán cho <b>cùng một mẫu</b> sẽ dao động nhiều hay ít?"</i></p>
+<p><b>Thí nghiệm.</b> Dữ liệu giả lập có 6 feature $x_1,\dots,x_6$ và giá trị cần đoán $y=4x_1+2x_2+x_3+\text{nhiễu}$ (nhiễu có độ lệch chuẩn 1). Ta dự đoán cho một mẫu cố định $x_0=(0.5,\dots,0.5)$, nên giá trị thật (bỏ nhiễu) là $4(0.5)+2(0.5)+0.5=\mathbf{3.5}$. Lấy 6 bộ dữ liệu train khác nhau (mỗi bộ 100 mẫu), huấn luyện 6 cây sâu, để mỗi cây dự đoán cho $x_0$:</p>
+<div class="tw"><table>
+<tr><th>Bộ dữ liệu</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+<tr><td>Dự đoán của cây</td><td>5.19</td><td>2.11</td><td>1.78</td><td>3.13</td><td>2.85</td><td>5.14</td></tr></table></div>
+<p>Giá trị thật là 3.5 nhưng các cây trả về từ 1.78 tới 5.19. <b>Variance là độ phân tán này</b>:</p>
+<ul><li>Trung bình 6 dự đoán: $(5.19+2.11+1.78+3.13+2.85+5.14)/6=3.37$.</li>
+<li>Độ lệch so với trung bình: $+1.82,\ -1.26,\ -1.59,\ -0.24,\ -0.52,\ +1.77$.</li>
+<li>Variance = trung bình bình phương độ lệch $=\dfrac{3.33+1.58+2.52+0.06+0.27+3.15}{6}\approx\mathbf{1.81}$.</li></ul>
+<p>(Chỉ 6 lần nên con số nhiễu; lặp 800 lần thì variance của một cây ổn định quanh $\sigma^2\approx1.1$ đến 1.2.)</p>
+<p><b>Phân biệt với bias:</b> bias là trung bình các dự đoán lệch khỏi giá trị thật bao nhiêu (ở đây 3.37 so với 3.5, bias nhỏ). Variance là các dự đoán <i>tản</i> quanh trung bình của chúng.</p>
+<p><b>Vì sao cây sâu có variance cao?</b> Chiếc lá chứa $x_0$ thường chỉ có 1 đến vài mẫu train, nên dự đoán gần như bằng giá trị $y$ (đã dính nhiễu) của chính mẫu đó. Nhiễu có variance 1 nên dự đoán cũng dao động cỡ 1: cây đang "thuộc lòng nhiễu".</p>
+
+<h3>3.2 Gộp nhiều cây giúp được gì</h3>
+<p>Nếu có $B$ giá trị <b>độc lập</b>, mỗi cái variance $\sigma^2$, variance của trung bình là:</p>
+$$\mathrm{Var}\!\Big(\frac1B\sum_{i=1}^BT_i\Big)=\frac1{B^2}\sum_{i=1}^B\mathrm{Var}(T_i)=\frac{B\sigma^2}{B^2}=\frac{\sigma^2}{B}$$
+<p>(Hằng số $\tfrac1B$ ra ngoài thành $\tfrac1{B^2}$; variance của tổng các biến độc lập bằng tổng các variance.) Nếu 6 cây ở bảng trên độc lập thì trung bình có variance khoảng $1.81/6\approx0.30$, và trung bình 3.37 sát giá trị thật hơn hẳn từng cây riêng.</p>
+<p><b>Nhưng thực tế ta chỉ có MỘT bộ dữ liệu.</b> Mọi cây đều nhìn cùng dữ liệu đó nên mắc lỗi giống nhau. Mức "giống nhau" này gọi là tương quan.</p>
+
+<h3>3.3 Tương quan ρ (đọc là "rô") là gì?</h3>
+<p>Câu hỏi để hiểu ρ: <i>"khi cây A đoán cao hơn bình thường, cây B có đoán cao hơn bình thường không?"</i></p>
+<ul><li>$\rho=1$: luôn cùng cao, cùng thấp (hai bản sao giống hệt).</li><li>$\rho=0$: không liên quan gì (như hai bộ dữ liệu độc lập).</li><li>Giữa 0 và 1: cùng chiều một phần.</li></ul>
+<p>Hai cây huấn luyện trên <b>cùng</b> dữ liệu thì $\rho$ gần 1, vì cùng thuộc lòng đúng những mẫu nhiễu đó. Mình đo thử: hai cây không có yếu tố ngẫu nhiên nào có $\rho\approx0.92$ đến 0.94.</p>
+<p><b>ρ trong đời thường:</b> 100 thẩm định viên cùng đoán giá một căn nhà. ρ = 0: mỗi người tự đoán độc lập. ρ = 1: mọi người nghe một người rồi lặp lại. ρ = 0.9: gần như chép nhau.</p>
+
+<h3>3.4 Lỗi chung và lỗi riêng: vì sao cần ρ thấp</h3>
+<p>Viết dự đoán của cây thứ $i$ thành:</p>
+$$T_i=\text{giá trị thật}+\underbrace{s}_{\text{lỗi chung}}+\underbrace{e_i}_{\text{lỗi riêng của cây }i}$$
+<ul><li><b>Lỗi chung $s$:</b> lỗi mà mọi cây đều mắc vì cùng nhìn một dữ liệu (cùng "tin đồn"). Variance của nó là $\rho\sigma^2$.</li>
+<li><b>Lỗi riêng $e_i$:</b> lỗi chỉ cây $i$ mắc, độc lập giữa các cây. Variance là $(1-\rho)\sigma^2$. Cộng hai phần lại được $\sigma^2$, đúng bằng variance của một cây.</li></ul>
+<p>Lấy trung bình $B$ cây:</p>
+$$\bar T=\text{giá trị thật}+s+\underbrace{\frac1B\sum_i e_i}_{\text{lỗi riêng bị trung bình hoá}}$$
+<p><b>Lỗi riêng triệt tiêu nhau được</b> (như năm người đoán giá nhà), còn <b>lỗi chung $s$ thì còn nguyên</b> vì ai cũng cộng thêm đúng số đó. Vì $s$ và các $e_i$ độc lập:</p>
+$$\boxed{\mathrm{Var}(\bar T)=\underbrace{\rho\,\sigma^2}_{\text{lỗi chung, không giảm được}}+\underbrace{\frac{(1-\rho)\,\sigma^2}{B}}_{\text{lỗi riêng, giảm theo }B}}$$
+<p><b>Vì sao cần ρ thấp?</b> Phần $\rho\sigma^2$ là <b>sàn</b>: thêm 1000 cây cũng không hạ nó xuống. Nếu $\rho=0.9$ thì dù bao nhiêu cây, variance không thấp hơn $0.9\sigma^2$, gần như không tốt hơn một cây. Muốn rừng giỏi hơn một cây, phải làm các cây <b>ít mắc lỗi chung</b>, tức nhìn dữ liệu và đặt câu hỏi theo những cách khác nhau.</p>
+<p>Với $\sigma^2=1$, $B=10$:</p>
+<div class="tw"><table>
+<tr><th>$\rho$</th><th>sàn $\rho\sigma^2$</th><th>$(1-\rho)\sigma^2/B$</th><th>Var của rừng</th></tr>
+<tr><td>0</td><td>0</td><td>0.1</td><td><b>0.10</b></td></tr>
+<tr><td>0.3</td><td>0.3</td><td>0.07</td><td><b>0.37</b></td></tr>
+<tr><td>0.7</td><td>0.7</td><td>0.03</td><td><b>0.73</b></td></tr></table></div>
+<p>Và khi $\rho$ tăng, thêm cây càng ít lợi (quy ước variance một cây = 1):</p>
+<div class="tw"><table>
+<tr><th>ρ</th><th>B = 1</th><th>B = 10</th><th>B = 100</th><th>Ý nghĩa</th></tr>
+<tr><td>0</td><td>1</td><td>0.10</td><td><b>0.01</b></td><td>Độc lập: 100 cây giảm 99% lỗi</td></tr>
+<tr><td>0.3</td><td>1</td><td>0.37</td><td><b>0.307</b></td><td>Từ 10 lên 100 cây chỉ giảm thêm 0.06</td></tr>
+<tr><td>0.6</td><td>1</td><td>0.64</td><td><b>0.604</b></td><td>Gần như đứng yên sau 10 cây</td></tr>
+<tr><td>0.9</td><td>1</td><td>0.91</td><td><b>0.901</b></td><td>100 cây chỉ giảm 10%, gần như vô ích</td></tr>
+<tr><td>1</td><td>1</td><td>1</td><td>1</td><td>100 cây bằng đúng 1 cây</td></tr></table></div>
+
+<div class="fig"><b>Hình 1.</b> Mô phỏng lỗi chung và lỗi riêng.
+<div style="padding:4px 0">
+<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:13px;margin-bottom:8px">
+<span>Số cây B</span><input type="range" id="wl_b" min="1" max="100" step="1" value="20"><b id="wl_bv"></b>
+<span>Tương quan ρ</span><input type="range" id="wl_r" min="0" max="1" step="0.05" value="0.3"><b id="wl_rv"></b>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"><button id="wl_nx">Thí nghiệm kế tiếp</button><button id="wl_a">Ví dụ: ρ = 0, B = 100</button><button id="wl_c">Ví dụ: ρ = 0.9, B = 100</button><span id="wl_ix" style="font-size:13px;align-self:center;color:var(--color-text-secondary)"></span></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<div><div style="font-size:13px;color:var(--color-text-secondary)">Một thí nghiệm: dự đoán của B cây (giá trị thật = 0)</div><svg id="wl_s1" viewBox="0 0 240 240" style="width:240px;max-width:100%;background:var(--color-background-secondary);border-radius:10px"></svg></div>
+<div style="flex:1;min-width:260px"><div style="font-size:13px;color:var(--color-text-secondary)">300 thí nghiệm: phân bố dự đoán</div><svg id="wl_s2" viewBox="0 0 300 240" style="width:100%;max-width:340px;background:var(--color-background-secondary);border-radius:10px"></svg>
+<div id="wl_st" style="font-size:13px;margin-top:6px"></div></div></div></div><div id="wl_cap" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--color-background-secondary);font-size:13px;line-height:1.6"></div><script>(function(){var g=function(i){return document.getElementById('wl_'+i)};
+function rng(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296}}
+var R=rng(2024);function gs(){return Math.sqrt(-2*Math.log(R()+1e-12))*Math.cos(2*Math.PI*R())}
+var N=300,S=[],E=[];for(var k=0;k<N;k++){S.push(gs());var a=[];for(var i=0;i<100;i++)a.push(gs());E.push(a)}
+var idx=0;
+function f(n,d){return (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toString()}
+function vr(a){var m=a.reduce(function(x,y){return x+y})/a.length;return a.reduce(function(x,y){return x+(y-m)*(y-m)},0)/a.length}
+function draw(){
+var B=+g('b').value,r=+g('r').value,a=Math.sqrt(r),c=Math.sqrt(1-r);
+g('bv').textContent=B;g('rv').textContent=f(r,2);g('ix').textContent='thí nghiệm #'+(idx+1)+' / 300';
+function Y(v){return 120-v*30}
+var h='<line x1="10" y1="'+Y(0)+'" x2="230" y2="'+Y(0)+'" stroke="var(--color-text-primary)" stroke-width="1.5"/><text x="12" y="'+(Y(0)-4)+'" font-size="11" fill="var(--color-text-primary)">giá trị thật</text>';
+var s=a*S[idx],tr=[],sum=0;for(var i=0;i<B;i++){var v=s+c*E[idx][i];tr.push(v);sum+=v}
+var avg=sum/B;
+h+='<line x1="10" y1="'+Y(s)+'" x2="230" y2="'+Y(s)+'" stroke="#D85A30" stroke-dasharray="4 3"/><text x="228" y="'+(Y(s)-4)+'" font-size="11" text-anchor="end" fill="#D85A30">lỗi chung s = '+f(s,2)+'</text>';
+tr.forEach(function(v,i){var x=30+((i*37)%100)/100*180;h+='<circle cx="'+x+'" cy="'+Y(Math.max(-3.8,Math.min(3.8,v)))+'" r="3.5" fill="#378ADD" fill-opacity="0.7"/>'});
+h+='<line x1="10" y1="'+Y(avg)+'" x2="230" y2="'+Y(avg)+'" stroke="#7F77DD" stroke-width="2.5"/><text x="228" y="'+(Y(avg)+14)+'" font-size="11" text-anchor="end" fill="#7F77DD">trung bình = '+f(avg,2)+'</text>';
+g('s1').innerHTML=h;
+var one=[],av=[];for(var k=0;k<N;k++){var ss=a*S[k],sm=0;for(var i=0;i<B;i++)sm+=ss+c*E[k][i];av.push(sm/B);one.push(ss+c*E[k][0])}
+var bins=28,lo=-3.5,hi=3.5,H1=new Array(bins).fill(0),H2=new Array(bins).fill(0);
+function bn(v){var j=Math.floor((v-lo)/(hi-lo)*bins);return Math.max(0,Math.min(bins-1,j))}
+one.forEach(function(v){H1[bn(v)]++});av.forEach(function(v){H2[bn(v)]++});
+var mx=Math.max.apply(null,H1.concat(H2)),q='<line x1="10" y1="200" x2="290" y2="200" stroke="var(--color-border-secondary)"/>',w=280/bins;
+for(var j=0;j<bins;j++){q+='<rect x="'+(10+j*w)+'" y="'+(200-H1[j]/mx*170)+'" width="'+(w-1)+'" height="'+(H1[j]/mx*170)+'" fill="#378ADD" fill-opacity="0.35"/><rect x="'+(10+j*w)+'" y="'+(200-H2[j]/mx*170)+'" width="'+(w-1)+'" height="'+(H2[j]/mx*170)+'" fill="#7F77DD" fill-opacity="0.75"/>'}
+var x0=10+(0-lo)/(hi-lo)*280;q+='<line x1="'+x0+'" y1="25" x2="'+x0+'" y2="200" stroke="var(--color-text-primary)" stroke-dasharray="3 3"/><text x="'+x0+'" y="214" font-size="11" text-anchor="middle" fill="var(--color-text-secondary)">0 (thật)</text>';
+q+='<rect x="12" y="8" width="10" height="10" fill="#378ADD" fill-opacity="0.5"/><text x="26" y="17" font-size="11" fill="var(--color-text-secondary)">một cây</text><rect x="90" y="8" width="10" height="10" fill="#7F77DD"/><text x="104" y="17" font-size="11" fill="var(--color-text-secondary)">trung bình B cây</text>';
+g('s2').innerHTML=q;
+var V=r+(1-r)/B,fl=r,red=(1-r)/B;
+var who=r<0.15?'Các cây gần như <b>độc lập</b> (như 100 thẩm định viên không bàn bạc với nhau).':r<0.5?'Các cây <b>khá khác nhau</b>, chỉ chung một phần nhỏ sai lầm.':r<0.8?'Các cây <b>khá giống nhau</b>: nhiều sai lầm là chung.':'Các cây <b>gần như sao chép nhau</b> (như các thẩm định viên cùng nghe một người đoán rồi lặp lại).';
+g('cap').innerHTML='<b>Ý nghĩa với ρ = '+f(r,2)+', B = '+B+':</b> '+who+' Variance của một cây = 1. Variance của trung bình '+B+' cây = ρ + (1−ρ)/B = '+f(r,2)+' + '+f(red,3)+' = <b>'+f(V,3)+'</b>, tức giảm <b>'+f((1-V)*100,0)+'%</b> so với một cây. Trong đó phần <b>'+f(fl,2)+'</b> là sàn (lỗi chung) và thêm cây cũng không bớt được; chỉ phần '+f(red,3)+' còn co lại khi B tăng.';
+g('st').innerHTML='Var một cây ≈ <b>'+f(vr(one),2)+'</b> · Var trung bình ≈ <b>'+f(vr(av),2)+'</b> · công thức ρ+(1−ρ)/B = <b>'+f(r+(1-r)/B,2)+'</b>';
+}
+g('a').onclick=function(){g('r').value=0;g('b').value=100;draw()};g('c').onclick=function(){g('r').value=0.9;g('b').value=100;draw()};g('nx').onclick=function(){idx=(idx+1)%N;draw()};
+['b','r'].forEach(function(i){g(i).addEventListener('input',draw)});draw();
+})();
+</script></div>
+<div class="how"><h4>Cách đọc Hình 1</h4><ul>
+<li>Ô trái: mỗi chấm xanh là dự đoán của một cây trong <b>một</b> thí nghiệm. Đường đen là giá trị thật. <b>Đường cam nét đứt là lỗi chung $s$</b>. <b>Đường tím</b> là trung bình B cây.</li>
+<li>Bấm <b>"Ví dụ: ρ = 0, B = 100"</b>: chấm xanh rải đều quanh đường đen, đường tím sát 0, variance còn 0.01.</li>
+<li>Bấm <b>"Ví dụ: ρ = 0.9, B = 100"</b>: đàn chấm co lại thành cụm hẹp nhưng nằm quanh <b>đường cam</b>, không phải đường đen. Bấm "Thí nghiệm kế tiếp": đường cam nhảy chỗ khác mỗi lần và đường tím luôn bám theo. Variance còn 0.901. <b>Thêm cây không sửa được lỗi chung.</b></li>
+<li>Ô phải gom 300 thí nghiệm: cột tím (trung bình B cây) chỉ hẹp lại khi ρ thấp; khi ρ cao, cột tím gần bằng cột xanh nhạt (một cây).</li></ul></div>
+</section>
+
+<section id="p4"><h2>Phần 4. Bootstrap và Bagging: làm các cây khác nhau về <u>dữ liệu</u></h2>
+<p>Mục tiêu từ Phần 3: các cây cần nhiều <b>lỗi riêng</b>, ít <b>lỗi chung</b>. Có hai nguồn lỗi chung: (1) các cây <b>cùng nhìn một bộ dữ liệu</b>, (2) các cây <b>cùng đặt một câu hỏi</b>. Phần này xử lý nguồn (1), Phần 5 xử lý nguồn (2).</p>
+<h3>4.1 Lý tưởng và thực tế</h3>
+<ul><li><b>Lý tưởng:</b> mỗi cây học trên một bộ dữ liệu <b>độc lập</b> lấy từ thế giới thật, nên $\rho=0$ và variance giảm đúng $\sigma^2/B$.</li>
+<li><b>Thực tế:</b> chỉ có <b>một</b> bộ dữ liệu, không thể ra ngoài thu thập thêm.</li></ul>
+<p><b>Bootstrap là mẹo giả lập nhiều bộ dữ liệu từ một bộ:</b> coi tập train là đại diện cho thế giới, rồi bốc ngẫu nhiên <b>có hoàn lại</b> để tạo các bộ "na ná nhưng không giống nhau". Mỗi cây học một bộ khác nhau nên thuộc lòng những mẫu nhiễu khác nhau.</p>
+<p><b>Vì sao có hoàn lại, không chia nhỏ tập train?</b> Chia 100 mẫu cho 10 cây thì mỗi cây chỉ có 10 mẫu, rất yếu. Bốc có hoàn lại thì mỗi bộ vẫn đủ $N$ mẫu (khoảng 63.2% mẫu khác nhau), cây vẫn mạnh mà các bộ vẫn khác nhau.</p>
+<h3>4.2 Bootstrap sample: ví dụ với 10 mẫu</h3>
+<p>Bốc 10 lần có trả lại từ các mẫu đánh số 0 đến 9, được: 8, 0, 1, 2, 1, 8, 8, 5, 0, 0.</p>
+<div class="tw"><table>
+<tr><th>Mẫu</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th></tr>
+<tr><td>Số lần xuất hiện</td><td>3</td><td>2</td><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>3</td><td>0</td></tr></table></div>
+<ul><li>Cây học trên 10 dòng này (mẫu 0 và 8 lặp 3 lần, mẫu 1 lặp 2 lần), gồm 5 mẫu khác nhau (0, 1, 2, 5, 8), tức 50%.</li>
+<li>5 mẫu còn lại (3, 4, 6, 7, 9) <b>cây này không nhìn thấy</b>: gọi là <b>out-of-bag (OOB)</b> của cây đó, sẽ dùng ở Phần 6.</li></ul>
+<h3>4.3 Vì sao khoảng 63.2%?</h3>
+<p>Xác suất một mẫu cụ thể <b>không</b> được chọn trong một lần bốc là $1-\frac1N$; qua $N$ lần bốc độc lập là $\left(1-\frac1N\right)^N$. Vậy xác suất mẫu đó <b>có mặt</b> là $1-\left(1-\frac1N\right)^N$:</p>
+<div class="tw"><table>
+<tr><th>$N$</th><th>10</th><th>100</th><th>1000</th><th>$\infty$</th></tr>
+<tr><td>$1-(1-1/N)^N$</td><td>0.651</td><td>0.634</td><td>0.632</td><td>$1-e^{-1}=0.632$</td></tr></table></div>
+<p>Mỗi cây thấy khoảng <b>63.2%</b> mẫu khác nhau, khoảng <b>36.8%</b> là OOB. (Ví dụ N = 10 ở trên ngẫu nhiên ra 50%, thấp hơn kỳ vọng 65%; lặp nhiều lần thì trung bình mới tiến tới 65.1%.)</p>
+<h3>4.4 Bagging = Bootstrap + Aggregating</h3>
+<ol><li>Với $b=1,\dots,B$: tạo bootstrap sample thứ $b$, huấn luyện cây $T_b$ trên nó (cho mọc sâu).</li>
+<li>Gộp (aggregate): bỏ phiếu (phân loại) hoặc lấy trung bình $\hat y=\frac1B\sum_bT_b(x)$ (hồi quy).</li></ol>
+<p><b>Bagging hạ ρ được bao nhiêu?</b> Trong thí nghiệm ở mục 3.1, mình lặp 800 lần, mỗi lần sinh bộ dữ liệu mới, huấn luyện 40 cây rồi đo ρ giữa hai cây và variance của dự đoán trung bình (số dao động vài phần trăm giữa các lần chạy, đọc theo xu hướng):</p>
+<div class="tw"><table>
+<tr><th>Cách xây rừng</th><th>ρ giữa hai cây</th><th>Variance của rừng 40 cây</th></tr>
+<tr><td>40 cây giống nhau (không bootstrap)</td><td>≈ 0.92</td><td>≈ 1.1 (không khá hơn một cây)</td></tr>
+<tr><td><b>Bagging</b></td><td>≈ 0.13</td><td>≈ 0.22</td></tr></table></div>
+<p>Chỉ riêng bootstrap đã hạ ρ từ gần 1 xuống khoảng 0.13. Vậy vì sao còn cần Phần 5?</p>
+</section>
+
+<section id="p5"><h2>Phần 5. Chọn feature ngẫu nhiên: làm các cây khác nhau về <u>câu hỏi</u></h2>
+<h3>5.0 Bài toán thật: rượu vang</h3>
+<ul><li><b>Dữ liệu:</b> 178 chai rượu vang từ vùng Ý, thuộc <b>3 giống nho</b> (3 lớp). Mỗi chai có <b>13 chỉ số hoá học</b> đo trong phòng thí nghiệm (13 feature): <code>proline</code>, <code>color_intensity</code>, <code>alcohol</code>, <code>flavanoids</code>, <code>hue</code>, <code>ash</code>...</li>
+<li><b>Nhiệm vụ:</b> nhìn 13 chỉ số, đoán chai rượu thuộc giống nho nào.</li>
+<li><b>Một cây ở node gốc</b> hỏi một câu duy nhất, ví dụ "<code>proline</code> ≤ 755 không?". Nó thử cả 13 chỉ số với mọi ngưỡng, rồi chọn câu làm <b>Gini giảm nhiều nhất</b>.</li></ul>
+<h3>5.1 Câu hỏi đầu tiên của mọi cây có giống nhau không?</h3>
+<p>Mức giảm Gini nếu dùng từng chỉ số làm câu hỏi ở node gốc, tính trên toàn bộ 178 chai:</p>
+<div class="tw"><table>
+<tr><th>Chỉ số</th><th>proline</th><th>color_intensity</th><th>alcohol</th><th>od280/od315</th><th>flavanoids</th><th>hue</th><th>...</th><th>nonflavanoid_phenols</th><th>ash</th></tr>
+<tr><td>Gini giảm</td><td><b>0.252</b></td><td><b>0.244</b></td><td>0.227</td><td>0.221</td><td>0.220</td><td>0.195</td><td>...</td><td>0.083</td><td>0.069</td></tr></table></div>
+<p><code>proline</code> và <code>color_intensity</code> dẫn đầu, các chỉ số còn lại kém hơn nhưng không quá xa. Mình dựng <b>500 cây Bagging</b> (mỗi cây một bootstrap sample, xét cả 13 chỉ số ở mỗi node) và đếm câu hỏi ở node gốc:</p>
+<div class="tw"><table>
+<tr><th>Câu hỏi ở node gốc</th><th>proline</th><th>color_intensity</th><th>flavanoids</th><th>alcohol</th><th>od280/od315</th><th>còn lại</th></tr>
+<tr><td>Số cây (trên 500)</td><td>204</td><td>164</td><td>57</td><td>36</td><td>35</td><td>4</td></tr></table></div>
+<ul><li>Chỉ có <b>6 loại câu hỏi</b> khác nhau xuất hiện ở node gốc, trong tổng 13.</li><li><code>proline</code> và <code>color_intensity</code> chiếm <b>368/500 = 74%</b> cây.</li></ul>
+<p>Bootstrap đã đổi dữ liệu, nhưng <b>3/4 số cây vẫn mở đầu bằng cùng hai câu hỏi</b>. Hai cây cùng mở đầu bằng "proline ≤ ?" sẽ chia dữ liệu gần giống nhau ngay từ đầu, kéo theo các nhánh dưới cũng na ná nhau. Đó là <b>lỗi chung</b> mà bootstrap không xử lý được.</p>
+<h3>5.2 Ví dụ ngoài đời: hội đồng giám khảo nếm rượu</h3>
+<p>Hình dung 500 giám khảo cùng phân loại chai rượu:</p>
+<ul><li><b>Luật cũ (Bagging):</b> ai cũng được xét cả 13 chỉ số. Hầu hết thấy <code>proline</code> hoặc <code>color_intensity</code> là câu hỏi hay nhất và đều hỏi nó trước. Họ giống nhau về cách nghĩ, nên khi sai thì <b>sai cùng nhau</b>.</li>
+<li><b>Luật mới (Random Forest):</b> trước mỗi câu hỏi, <b>bốc thăm 3 chỉ số</b> trong 13; giám khảo chỉ được chọn câu hay nhất <b>trong 3 chỉ số đó</b>. Giám khảo bốc phải <code>ash</code>, <code>hue</code>, <code>alcohol</code> thì không thể hỏi <code>proline</code> dù nó vốn tốt hơn.</li></ul>
+<p><b>Một lần bốc cụ thể</b> ($m=\lfloor\sqrt{13}\rfloor=3$): bốc được {<code>ash</code> 0.069, <code>hue</code> 0.195, <code>alcohol</code> 0.227}. So 3 giá trị: <code>alcohol</code> lớn nhất, nên <b>câu hỏi gốc là "alcohol ≤ ?"</b>. Giám khảo khác bốc {<code>proline</code>, <code>hue</code>, <code>ash</code>} thì chọn <code>proline</code>. Việc bốc xảy ra <b>lại ở mọi node</b>, không chỉ node gốc.</p>
+<p>Kết quả đo trên 500 cây:</p>
+<div class="tw"><table>
+<tr><th></th><th>Số loại câu hỏi khác nhau ở node gốc</th><th>proline</th><th>color_intensity</th><th>flavanoids</th><th>alcohol</th><th>od280/od315</th></tr>
+<tr><td>Bagging (xét cả 13)</td><td>6</td><td>204 (41%)</td><td>164 (33%)</td><td>57</td><td>36</td><td>35</td></tr>
+<tr><td>Random Forest ($m=3$)</td><td><b>13</b> (đủ cả 13)</td><td>94 (19%)</td><td>78 (16%)</td><td>77</td><td>64</td><td>57</td></tr></table></div>
+<p>Mỗi chỉ số đều từng được dùng ở node gốc của một số cây. Các cây giờ <b>hỏi những câu khác nhau</b>, nên lỗi bớt trùng nhau, tức ρ giảm.</p>
+<h3>5.3 Cái giá phải trả</h3>
+<ul><li>Giám khảo bốc phải 3 chỉ số kém (ví dụ <code>ash</code>, <code>nonflavanoid_phenols</code>, <code>magnesium</code>) vẫn <b>bắt buộc</b> chọn một câu trong đó. Cây đó kém hơn cây được xét cả 13 chỉ số: $\sigma^2$ (variance của một cây) <b>tăng</b>.</li>
+<li>Nhưng cả hội đồng bớt "nghĩ giống nhau", nên ρ giảm. Rừng thắng khi ρ giảm nhiều hơn mức $\sigma^2$ tăng.</li>
+<li><b>$m$ nhỏ</b> (ví dụ 1): cây rất khác nhau (ρ thấp) nhưng mỗi cây yếu. <b>$m=13$ (tất cả):</b> cây mạnh nhưng giống nhau, quay lại Bagging. Mặc định $\lfloor\sqrt p\rfloor$ là điểm cân bằng thường dùng.</li></ul>
+<p>Cho $p$ feature, mặc định:</p>
+$$m=\lfloor\sqrt p\,\rfloor\ \ (\text{phân loại}),\qquad m=\lfloor p/3\rfloor\ \ (\text{hồi quy})$$
+<p>Đo trên dữ liệu mô phỏng của Phần 3 (6 feature, $m=2$), đọc theo xu hướng:</p>
+<div class="tw"><table>
+<tr><th>Cách xây rừng</th><th>Var của <b>một</b> cây $\sigma^2$</th><th>ρ</th><th>Var của rừng 40 cây</th></tr>
+<tr><td>Bagging (mọi feature)</td><td>≈ 1.1</td><td>≈ 0.13</td><td>≈ 0.22</td></tr>
+<tr><td>Random Forest ($m=2$)</td><td>≈ 1.4</td><td>≈ 0.06</td><td>≈ 0.16</td></tr></table></div>
+<p>$\rho$ giảm, $\sigma^2$ tăng; gộp lại variance của rừng thấp hơn Bagging khoảng 30% trong ví dụ này. Mức cải thiện <b>tuỳ dữ liệu</b>: trên bộ ung thư vú ở Phần 7, Bagging và Random Forest gần như bằng nhau.</p>
+<div class="fig"><b>Hình 2.</b> Bốc thăm chỉ số cho node gốc trên 13 chỉ số rượu vang.
+<div style="padding:4px 0">
+<div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:6px">13 chỉ số của rượu vang: cột cam = mức Gini giảm nếu dùng chỉ số đó làm câu hỏi ở node gốc (tính trên 178 chai). Cột tím = số giám khảo (cây) thực sự chọn chỉ số đó.</div>
+<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:13px;margin-bottom:8px">
+<span>Mỗi lần được xét m chỉ số</span><input type="range" id="wn_m" min="1" max="13" step="1" value="3"><b id="wn_mv"></b></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button id="wn_b1">Bốc thăm cho 1 giám khảo</button><button id="wn_b500">Bốc cho 500 giám khảo</button><button id="wn_bc">Xoá đếm</button></div>
+<div id="wn_last" style="font-size:13px;margin-bottom:10px;min-height:22px"></div>
+<div id="wn_tl" style="font-size:12px"></div>
+<div id="wn_cap" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--color-background-secondary);font-size:13px;line-height:1.6"></div>
+</div>
+<script>(function(){var g=function(i){return document.getElementById('wn_'+i)};
+var N=['alcohol','malic_acid','ash','alcalinity_of_ash','magnesium','total_phenols','flavanoids','nonflavanoid_phenols','proanthocyanins','color_intensity','hue','od280/od315','proline'];
+var G=[0.227,0.113,0.069,0.115,0.110,0.167,0.220,0.083,0.105,0.244,0.195,0.221,0.252];
+var ord=N.map(function(_,i){return i}).sort(function(a,b){return G[b]-G[a]});
+var cnt=N.map(function(){return 0}),tot=0,last=null;
+function f(n,d){return (Math.round(n*Math.pow(10,d))/Math.pow(10,d)).toString()}
+function one(m){var a=N.map(function(_,i){return i});for(var i=12;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}
+var sub=a.slice(0,m),w=sub[0];sub.forEach(function(x){if(G[x]>G[w])w=x});cnt[w]++;tot++;last={sub:sub,w:w}}
+function bar(v,mx,c,txt){return '<div style="flex:1;background:var(--color-background-secondary);height:12px;border-radius:3px"><div style="height:12px;border-radius:3px;width:'+Math.max(0,v/mx*100)+'%;background:'+c+'"></div></div><span style="width:70px;text-align:right">'+txt+'</span>'}
+function draw(){
+var m=+g('m').value;g('mv').textContent=m+(m===13?' (tất cả = Bagging)':' trong 13');
+var h='';ord.forEach(function(i){h+='<div style="display:flex;align-items:center;gap:6px;margin:2px 0"><span style="width:130px;font-size:12px">'+N[i]+'</span>'+bar(G[i],0.252,'#BA7517',f(G[i],3))+bar(cnt[i],Math.max(1,tot),'#7F77DD',tot?cnt[i]+' ('+f(cnt[i]/tot*100,0)+'%)':'0')+'</div>'});
+g('tl').innerHTML=h;
+if(last){var s=last.sub.slice().sort(function(a,b){return G[b]-G[a]}).map(function(x){return (x===last.w?'<b>':'')+N[x]+' ('+f(G[x],3)+')'+(x===last.w?'</b>':'')}).join(', ');
+g('last').innerHTML='Giám khảo vừa bốc: '+s+' → chọn <b>'+N[last.w]+'</b> làm câu hỏi gốc (lớn nhất trong số được bốc).'}
+else g('last').innerHTML='Bấm "Bốc thăm cho 1 giám khảo" để thấy một lần bốc.';
+var d=cnt.filter(function(c){return c>0}).length,top2=(cnt[12]+cnt[9]);
+var txt;
+if(!tot)txt='Chưa có dữ liệu. Bấm "Bốc cho 500 giám khảo", rồi đổi m và bấm lại để so sánh.';
+else{var share=f(top2/tot*100,0);
+txt='<b>Với m = '+m+' (đã bốc '+tot+' lần):</b> có <b>'+d+'/13</b> loại câu hỏi khác nhau được dùng ở node gốc; proline và color_intensity chiếm <b>'+share+'%</b>. ';
+if(m===13)txt+='Mọi giám khảo xét hết 13 chỉ số nên luôn chọn proline (đứng đầu): <b>mọi cây hỏi cùng một câu</b>. (Với Bagging thật, bootstrap làm dữ liệu đổi nên còn 6 loại câu hỏi; ở đây chưa có bootstrap, nên đây là trường hợp cực đoan.)';
+else if(m>=7)txt+='m còn lớn nên proline hay color_intensity thường có mặt và thắng: các cây vẫn khá giống nhau.';
+else if(m>=2)txt+='Có lần proline không được bốc nên chỉ số khác phải thay thế: các cây hỏi nhiều câu khác nhau hơn (ρ giảm), nhưng đôi khi cây bị ép dùng chỉ số kém (σ² tăng).';
+else txt+='m = 1: không còn lựa chọn, chỉ số nào bị bốc thì dùng. Các cây rất khác nhau nhưng nhiều cây phải hỏi câu rất dở.';}
+g('cap').innerHTML=txt}
+g('b1').onclick=function(){one(+g('m').value);draw()};
+g('b500').onclick=function(){var m=+g('m').value;for(var i=0;i<500;i++)one(m);draw()};
+g('bc').onclick=function(){cnt=N.map(function(){return 0});tot=0;last=null;draw()};
+g('m').addEventListener('input',function(){cnt=N.map(function(){return 0});tot=0;last=null;draw()});draw();
+})();
+</script>
+</div>
+<div class="how"><h4>Cách đọc Hình 2 (rượu vang)</h4>
+<p>Mỗi hàng là một chỉ số: <b>cột cam</b> là độ tốt của nó (cố định), <b>cột tím</b> là số giám khảo thực sự chọn nó làm câu hỏi gốc. Ô chữ phía dưới tự giải thích tình huống hiện tại.</p>
+<div class="tw"><table>
+<tr><th>Bạn làm gì</th><th>Bạn thấy</th><th>Ý nghĩa</th></tr>
+<tr><td>m = 13, bấm "Bốc cho 500"</td><td>100% giám khảo chọn <code>proline</code></td><td>Xét hết mọi chỉ số, ai cũng chọn câu tốt nhất giống nhau: lỗi chung lớn (ρ cao)</td></tr>
+<tr><td>m = 3, bấm "Bốc cho 500"</td><td>Khoảng 11 đến 12 cột tím có người chọn; <code>proline</code> còn khoảng 23% (đúng bằng xác suất 3/13 nó có mặt trong 3 chỉ số bốc ra)</td><td>Câu hỏi đa dạng hơn, các cây bớt giống nhau (ρ giảm)</td></tr>
+<tr><td>m = 1</td><td>Cột tím gần đều nhau (khoảng 1/13 mỗi cột)</td><td>Cây khác nhau tối đa, nhưng nhiều cây bị ép dùng chỉ số dở như <code>ash</code> (σ² tăng)</td></tr>
+<tr><td>Bấm "Bốc thăm cho 1 giám khảo" nhiều lần với m = 3</td><td>Dòng "Giám khảo vừa bốc" cho thấy 3 chỉ số và chỉ số thắng</td><td>Chỉ số tốt nhất <b>trong 3 chỉ số được bốc</b>, không phải trong 13</td></tr></table></div>
+<p>Lưu ý: widget dùng mức Gini cố định, <b>không có bootstrap</b>. Vì vậy (1) "m = 13" cực đoan hơn Bagging thật (500 cây Bagging thật cho 6 loại câu hỏi, mục 5.1); (2) <code>ash</code>, chỉ số kém nhất, không bao giờ thắng khi m ≥ 2, nên widget cho khoảng 11 đến 12 loại câu hỏi. Khi dựng 500 cây thật có bootstrap (mục 5.2), mức Gini đổi nhẹ giữa các cây nên cả 13 chỉ số đều xuất hiện.</p></div>
+<div class="box"><b>Lưu ý quan trọng:</b> câu chuyện "feature áp đảo làm mọi cây chọn nó ở node gốc" đúng 100% trên <b>dữ liệu mô phỏng</b> của Phần 3 (500/500 cây chọn $x_1$ vì hệ số của nó lớn nhất). Trên dữ liệu thật thì tuỳ: ở rượu vang có hai chỉ số dẫn đầu chiếm 74%, còn trên bộ ung thư vú (Phần 7) bootstrap đã làm đổi feature ở node gốc giữa các cây. Lợi ích của chọn feature phụ thuộc dữ liệu: nó giúp nhiều nhất khi có feature áp đảo thật.</div>
+<h3>5.4 Thuật toán Random Forest hoàn chỉnh</h3>
+<p><b>Huấn luyện:</b> với $b=1,\dots,B$</p>
+<ol><li>Bốc bootstrap sample $D_b$ từ tập train (Phần 4).</li>
+<li>Dựng cây $T_b$ trên $D_b$ như Decision Tree bình thường, <b>trừ một điểm</b>: ở <b>mỗi node</b>, chỉ bốc $m$ feature ngẫu nhiên và tìm câu hỏi tốt nhất trong đó (Phần 5).</li>
+<li>Cho cây mọc sâu, <b>không tỉa</b> (mỗi cây overfit, variance cao, bias thấp; việc gộp lo variance).</li></ol>
+<p><b>Dự đoán:</b> gộp $B$ cây: bỏ phiếu (phân loại) hoặc lấy trung bình (hồi quy).</p>
+<div class="box"><b>Một dòng:</b> Random Forest = Bagging + chọn $m$ feature ngẫu nhiên ở mỗi node. Bootstrap giảm lỗi chung do <b>dữ liệu</b>, chọn feature giảm lỗi chung do <b>câu hỏi</b>.</div>
+<div class="fig"><b>Hình 3.</b> Một cây so với cả rừng trên dữ liệu 2D (hai nửa vầng trăng).
+<div style="padding:4px 0"><div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<svg id="wf_sv" viewBox="0 0 330 280" style="width:330px;max-width:100%;flex:0 0 auto;background:var(--color-background-secondary);border-radius:12px"></svg>
+<div style="flex:1;min-width:250px;font-size:13px">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button id="wf_p1">1 cây (như Decision Tree)</button><button id="wf_p2">Rừng 100 cây</button></div>
+<div style="display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center">
+<span>Số cây T</span><input type="range" id="wf_t" min="1" max="100" step="1" value="25"><b id="wf_tv"></b>
+<span>Độ sâu tối đa</span><input type="range" id="wf_d" min="1" max="12" step="1" value="12"><b id="wf_dv"></b>
+<span>Feature mỗi node (m)</span><input type="range" id="wf_m" min="1" max="2" step="1" value="1"><b id="wf_mv"></b>
+</div>
+<label style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="checkbox" id="wf_bs" checked> Dùng bootstrap</label>
+<div id="wf_mt" style="font-size:14px;margin-bottom:8px"></div>
+<div style="color:var(--color-text-secondary);font-size:12px">Nền: xác suất lớp 1 trung bình của các cây (đậm = chắc chắn). Chấm có viền = dữ liệu train. 300 điểm test không hiện ra, chỉ dùng để tính accuracy.</div>
+</div></div></div><div id="wf_cap" style="margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--color-background-secondary);font-size:13px;line-height:1.6"></div><script>(function(){var g=function(i){return document.getElementById('wf_'+i)};
+function rng(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296}}
+function gauss(r){return Math.sqrt(-2*Math.log(r()+1e-12))*Math.cos(2*Math.PI*r())}
+function moons(n,r,sd){var P=[];for(var i=0;i<n;i++){var c=i%2,t=Math.PI*r();var x,y;if(c===0){x=Math.cos(t);y=Math.sin(t)}else{x=1-Math.cos(t);y=0.5-Math.sin(t)}P.push([x+sd*gauss(r),y+sd*gauss(r),c])}return P}
+var r0=rng(11),TR=moons(100,r0,0.32),TE=moons(300,rng(99),0.32);
+var X0=-1.6,X1=2.6,Y0=-1.1,Y1=1.6,W=330,H=280;
+function px(x){return (x-X0)/(X1-X0)*W}function py(y){return H-(y-Y0)/(Y1-Y0)*H}
+function gini(n0,n1){var n=n0+n1;if(!n)return 0;var p=n1/n;return 2*p*(1-p)}
+function build(P,depth,maxD,m,r){
+var n=P.length,n1=P.reduce(function(a,p){return a+p[2]},0),n0=n-n1;
+if(n0===0||n1===0||depth>=maxD||n<2)return{p:n1/n};
+var fs=m>=2?[0,1]:[r()<0.5?0:1],best=null,pg=gini(n0,n1);
+fs.forEach(function(f){var S=P.slice().sort(function(a,b){return a[f]-b[f]}),l0=0,l1=0;
+for(var i=0;i<n-1;i++){if(S[i][2])l1++;else l0++;if(S[i][f]===S[i+1][f])continue;var nl=i+1,nr=n-nl,gg=(nl*gini(l0,l1)+nr*gini(n0-l0,n1-l1))/n;if(!best||gg<best.g-1e-12)best={g:gg,f:f,t:(S[i][f]+S[i+1][f])/2}}});
+if(!best||best.g>=pg-1e-12)return{p:n1/n};
+var L=P.filter(function(p){return p[best.f]<=best.t}),Rr=P.filter(function(p){return p[best.f]>best.t});
+if(!L.length||!Rr.length)return{p:n1/n};
+return{f:best.f,t:best.t,l:build(L,depth+1,maxD,m,r),r:build(Rr,depth+1,maxD,m,r)}}
+function pred(nd,x,y){while(nd.l){nd=(nd.f===0?x:y)<=nd.t?nd.l:nd.r}return nd.p}
+var cache={};
+function forest(d,m,bs,T){var key=d+'_'+m+'_'+bs;if(!cache[key])cache[key]=[];var c=cache[key];
+var r=rng(1000+d*7+m*3+(bs?1:0));
+while(c.length<T){var P=TR;if(bs){P=[];for(var i=0;i<TR.length;i++)P.push(TR[Math.floor(r()*TR.length)])}c.push(build(P,0,d,m,r))}
+return c.slice(0,T)}
+function f1(v){return Math.round(v*10)/10}
+function f(n){return n}
+function pr(F,x,y){var s=0;for(var i=0;i<F.length;i++)s+=pred(F[i],x,y);return s/F.length}
+function draw(){
+var T=+g('t').value,d=+g('d').value,m=+g('m').value,bs=g('bs').checked;
+g('tv').textContent=T;g('dv').textContent=d===12?'không giới hạn':d;g('mv').textContent=m+(m===2?' (tất cả)':' trong 2');
+var F=forest(d,m,bs,T),h='',gx=44,gy=37,cw=W/gx,ch=H/gy;
+for(var i=0;i<gx;i++)for(var j=0;j<gy;j++){var x=X0+(i+.5)/gx*(X1-X0),y=Y0+(j+.5)/gy*(Y1-Y0),p=pr(F,x,y);h+='<rect x="'+(i*cw)+'" y="'+(H-(j+1)*ch)+'" width="'+(cw+.5)+'" height="'+(ch+.5)+'" fill="'+(p>=0.5?'#378ADD':'#D85A30')+'" fill-opacity="'+(0.06+0.5*Math.abs(2*p-1)).toFixed(2)+'"/>'}
+TR.forEach(function(p){h+='<circle cx="'+px(p[0])+'" cy="'+py(p[1])+'" r="4" fill="'+(p[2]?'#378ADD':'#D85A30')+'" stroke="var(--color-text-primary)" stroke-width="1"/>'});
+g('sv').innerHTML=h;
+function acc(S){var ok=0;S.forEach(function(p){if((pr(F,p[0],p[1])>=0.5?1:0)===p[2])ok++});return ok/S.length}
+var atr=Math.round(acc(TR)*1000)/10,ate=Math.round(acc(TE)*1000)/10;
+g('mt').innerHTML='Accuracy train: <b>'+atr+'%</b> · test: <b>'+ate+'%</b>';
+var cp='<b>Đang xem:</b> '+T+' cây, độ sâu '+(d===12?'không giới hạn':d)+', '+(m===2?'xét cả 2 feature':'1 feature ngẫu nhiên')+' mỗi node, '+(bs?'có':'không')+' bootstrap. ';
+if(T===1)cp+='Một cây duy nhất: ranh giới răng cưa bám theo từng điểm nhiễu, train '+atr+'% nhưng test chỉ '+ate+'%. Chênh lệch '+f1(atr-ate)+' điểm giữa train và test là dấu hiệu overfitting.';
+else if(!bs&&m===2)cp+='Không bootstrap và xét cả 2 feature: mọi cây học đúng cùng dữ liệu nên giống hệt nhau, nhiều cây cũng chỉ bằng một cây (ρ gần 1).';
+else cp+='Nhiều cây khác nhau cùng bỏ phiếu: các điểm nhiễu mỗi cây thuộc lòng bị các cây khác lấn át, ranh giới mượt hơn. Chênh lệch train–test là '+f1(atr-ate)+' điểm.';
+g('cap').innerHTML=cp+(d<=4?' Độ sâu bị giới hạn nên mỗi cây đơn giản hơn (bias cao hơn, variance thấp hơn).':'')+' <span style="color:var(--color-text-secondary)">(Số trên một bộ dữ liệu nhỏ nên nhiễu; trung bình 20 bộ: Decision Tree 84.5%, Bagging 86.7%, Random Forest 87.5%.)</span>';
+}
+function set(t,d,m,b){g('t').value=t;g('d').value=d;g('m').value=m;g('bs').checked=b;draw()}
+g('p1').onclick=function(){set(1,12,2,false)};g('p2').onclick=function(){set(100,12,1,true)};
+['t','d','m','bs'].forEach(function(i){g(i).addEventListener('input',draw)});draw();
+})();
+</script></div>
+<div class="how"><h4>Cách đọc Hình 3</h4><ul>
+<li>Bấm <b>"1 cây (như Decision Tree)"</b>: ranh giới răng cưa, uốn theo từng điểm nhiễu. Train accuracy 100% nhưng test 82.7%: overfitting.</li>
+<li>Bấm <b>"Rừng 100 cây"</b> (bootstrap bật, m = 1 trong 2): ranh giới mượt hơn rõ. Trên bộ cụ thể này test chỉ nhích lên khoảng 83.3% vì chỉ có 100 điểm train và nhiễu cao. Lặp 20 bộ dữ liệu cùng kiểu, test trung bình: <b>Decision Tree 84.5%</b>, <b>Bagging 86.7%</b>, <b>Random Forest 87.5%</b>.</li>
+<li>Kéo <b>T</b> từ 1 lên 100: ranh giới mượt dần. Tắt bootstrap và để m = 2 thì các cây giống hệt nhau, nhiều cây cũng chỉ bằng một cây.</li>
+<li>Hạ <b>độ sâu tối đa</b> xuống 3 hoặc 4 với T = 100: test của bộ này lên khoảng 85.7%. Với dữ liệu nhiễu, rừng nhiều cây nông cũng là lựa chọn tốt.</li>
+<li>Ô chữ phía dưới tự mô tả cấu hình hiện tại và chênh lệch train–test.</li></ul></div>
+</section>
+
+<section id="p6"><h2>Phần 6. Dùng rừng: dự đoán, OOB, độ quan trọng feature</h2>
+<h3>6.1 Dự đoán</h3>
+<ul><li><b>Phân loại, bỏ phiếu:</b> 5 cây dự đoán {1, 0, 1, 1, 0} cho một người. Có 3 phiếu cho lớp 1, nên rừng chọn <b>lớp 1</b>.</li>
+<li><b>Xác suất:</b> nếu mỗi cây trả về tỉ lệ lớp 1 ở lá, rồi lấy trung bình, ta có xác suất kèm theo, ví dụ 0.6. Cách này thường mượt hơn đếm phiếu.</li>
+<li><b>Hồi quy:</b> lấy trung bình giá trị các cây dự đoán.</li></ul>
+<h3>6.2 OOB: tự kiểm tra mà không cần tập validation</h3>
+<p>Nhớ Phần 4: mỗi cây không thấy khoảng 36.8% mẫu (OOB của nó). Với <b>mỗi mẫu train</b>, chỉ lấy các cây <b>không</b> học mẫu đó, cho chúng bỏ phiếu, rồi so với nhãn thật. Tỉ lệ đúng trên toàn bộ mẫu là <b>OOB score</b>.</p>
+<p>Mẫu đó chưa từng xuất hiện với các cây vừa dùng, nên đây là ước lượng công bằng, giống một tập validation miễn phí. Trong sklearn: <code>RandomForestClassifier(oob_score=True)</code>.</p>
+<h3>6.3 Độ quan trọng feature (feature importance)</h3>
+<div class="tw"><table>
+<tr><th>Cách</th><th>Ý tưởng</th><th>Lưu ý</th></tr>
+<tr><td><b>MDI</b> (mặc định của sklearn)</td><td>Cộng mức giảm Gini mà feature đó gây ra ở mọi node, trên mọi cây</td><td>Tính nhanh nhưng thiên vị feature có nhiều giá trị khác nhau</td></tr>
+<tr><td><b>Permutation</b></td><td>Xáo trộn một cột trên tập test, xem accuracy giảm bao nhiêu</td><td>Đáng tin hơn, chậm hơn</td></tr></table></div>
+<p><b>Cẩn thận khi các feature tương quan mạnh:</b> cây có thể chọn feature này hoặc feature kia, nên điểm quan trọng bị <b>chia nhau</b> và mỗi feature trông kém quan trọng hơn thực tế. Ví dụ: <code>worst perimeter</code>, <code>worst radius</code>, <code>worst area</code> đo gần như cùng một thứ.</p>
+</section>
+
+<section id="p7"><h2>Phần 7. Ví dụ thật: dữ liệu ung thư vú (sklearn)</h2>
+<p>569 mẫu, 30 feature; mỗi feature là một đặc trưng đo từ ảnh khối u, nhãn là lành tính hay ác tính. Với $p=30$, $m=\lfloor\sqrt{30}\rfloor=5$: mỗi node chỉ xét 5 trong 30 feature.</p>
+<ul><li><b>OOB score ≈ 0.972</b>, <b>test accuracy ≈ 0.9415</b>. OOB dùng 398 mẫu train, test chỉ 171 mẫu nên cả hai đều nhiễu, không cần trùng nhau; OOB là thước đo đáng tin để ước lượng.</li>
+<li><b>Số cây:</b> accuracy tăng nhanh ở vài chục cây đầu rồi <b>phẳng</b> quanh 25 cây; thêm cây <b>không gây overfit</b> (chỉ làm phần $\frac{(1-\rho)\sigma^2}{B}$ nhỏ đi), chỉ tốn thời gian.</li>
+<li>Bagging và Random Forest trên bộ này cho kết quả gần như bằng nhau; chênh lệch nhỏ hơn độ lệch chuẩn nên chưa đủ để kết luận.</li>
+<li><b>Số feature mỗi node:</b> $m=1,\ 5\,(\sqrt p),\ 10,\ 30$ cho accuracy trung bình 0.955, 0.941, 0.943, 0.943: chênh dưới 1.5 điểm, nằm trong nhiễu của tập test 171 mẫu. Mặc định $\sqrt p$ thường đủ tốt; muốn chắc thì chọn bằng cross-validation.</li></ul>
+</section>
+
+<section id="p8"><h2>Phần 8. Tham số quan trọng, ưu và nhược điểm</h2>
+<div class="tw"><table>
+<tr><th>Tham số (sklearn)</th><th>Ý nghĩa</th><th>Ghi chú</th></tr>
+<tr><td><code>n_estimators</code></td><td>Số cây $B$</td><td>Nhiều hơn thì ổn định hơn, tới ngưỡng thì phẳng; không overfit</td></tr>
+<tr><td><code>max_features</code></td><td>$m$</td><td>Mặc định $\sqrt p$ (phân loại); là tham số đáng chỉnh nhất</td></tr>
+<tr><td><code>max_depth</code>, <code>min_samples_leaf</code></td><td>Giới hạn cây</td><td>Mặc định cho cây mọc sâu; dữ liệu nhiễu thì thử giới hạn</td></tr>
+<tr><td><code>oob_score</code></td><td>Bật OOB</td><td>Dùng thay validation</td></tr></table></div>
+<div class="tw"><table>
+<tr><th>Ưu điểm</th><th>Nhược điểm</th></tr>
+<tr><td>Ít overfit hơn một cây, thường chạy tốt ngay với tham số mặc định</td><td>Khó diễn giải hơn một cây</td></tr>
+<tr><td>Không cần chuẩn hoá feature (cây chỉ so sánh ngưỡng)</td><td>Tốn bộ nhớ và thời gian hơn một cây</td></tr>
+<tr><td>Cho OOB và feature importance miễn phí</td><td>Hồi quy <b>không ngoại suy</b>: dự đoán không vượt ngoài khoảng giá trị đã thấy</td></tr></table></div>
+</section>
+
+<section id="p9"><h2>Tổng kết: chuỗi lý do</h2>
+<ol><li><b>Một Decision Tree</b> overfit: bias thấp, variance cao (đổi một mẫu là cây đổi).</li>
+<li><b>Lấy trung bình nhiều cây</b> giảm variance, nhưng chỉ khi các cây khác nhau.</li>
+<li>Các cây giống nhau vì (a) cùng dữ liệu, giải bằng <b>Bootstrap</b>; (b) cùng câu hỏi, giải bằng <b>chọn $m$ feature ngẫu nhiên ở mỗi node</b>.</li>
+<li>$\mathrm{Var}=\rho\sigma^2+\frac{(1-\rho)\sigma^2}{B}$: thêm cây chỉ giảm phần thứ hai; <b>sàn $\rho\sigma^2$</b> chỉ hạ được bằng cách hạ ρ.</li>
+<li>Cái giá: mỗi cây hơi yếu hơn ($\sigma^2$ tăng), nhưng ρ giảm nhiều hơn nên rừng vẫn thắng.</li></ol>
+<div class="box"><b>Một câu để nhớ:</b> Random Forest = nhiều cây overfit, mỗi cây học dữ liệu khác nhau và được hỏi các câu khác nhau, rồi lấy ý kiến số đông.</div>
+<p style="color:var(--muted);font-size:14px">Các con số đều được kiểm bằng code trên dữ liệu mô phỏng và sklearn (rượu vang, ung thư vú). Một số số (ρ, variance) dao động vài phần trăm giữa các lần chạy nên đọc theo xu hướng. Các hình tương tác chỉ được kiểm tra cú pháp JavaScript, chưa mở trong trình duyệt thật.</p>
+</section>
+</main>
+<footer><div class="wrap">Tiếng Việt kèm thuật ngữ tiếng Anh · tất cả số liệu trong ví dụ đã được kiểm tra bằng code</div></footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>window.addEventListener("load",function(){if(window.renderMathInElement)renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]});});</script>
+<script></script>
+</body>
+</html>

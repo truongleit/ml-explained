@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SVM từ con số 0</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: một cột đọc ~70ch; mỗi phần = lý thuyết → ví dụ thực tế → thí nghiệm có khung */
+:root{
+  --bg:#F5F6F9; --panel:#FFFFFF; --ink:#1A2030; --muted:#596277; --line:#DADFE8; --soft:#EDEFFA;
+  --accent:#4A4FCF; --pos:#12866F; --neg:#CF5A22; --err:#D2343A; --story:#0F6E78;
+  --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-body:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11141B; --panel:#181C25; --ink:#E5E8EF; --muted:#9AA3B5; --line:#2B313E; --soft:#1F2336;
+  --accent:#A0A4FF; --pos:#3DC6A5; --neg:#F08A55; --err:#FF6B6B; --story:#5CC8D2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11141B; --panel:#181C25; --ink:#E5E8EF; --muted:#9AA3B5; --line:#2B313E; --soft:#1F2336;
+  --accent:#A0A4FF; --pos:#3DC6A5; --neg:#F08A55; --err:#FF6B6B; --story:#5CC8D2; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16.5px;line-height:1.7;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+main{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+header{display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--font-display);font-weight:600;font-size:clamp(34px,6vw,50px);line-height:1.1;margin:0;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:600;font-size:27px;line-height:1.25;margin:0;text-wrap:balance;display:flex;gap:12px;align-items:baseline}
+h2 .n{font-family:var(--font-mono);font-size:15px;color:var(--accent);font-weight:500}
+h3{font-size:17px;font-weight:600;margin:6px 0 0}
+p{margin:0}
+.lede{color:var(--muted);font-size:18px;max-width:62ch}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+nav a{font-size:13.5px;color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--panel)}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+section{display:flex;flex-direction:column;gap:16px;scroll-margin-top:20px}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.eq{overflow-x:auto;padding:4px 0}
+.note{border-left:3px solid var(--accent);background:var(--soft);padding:12px 16px;border-radius:0}
+.from{font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+.story{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.story .tag{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--story)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.story .tbl{background:var(--bg)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:13px;color:var(--muted);background:var(--soft)}
+td.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+figure.lab{margin:4px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.labhead{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.labhead.real{color:var(--story)}
+.controls{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center}
+.controls label{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);flex:1 1 220px;min-width:0}
+.controls input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.val{font-family:var(--font-mono);font-size:13.5px;color:var(--ink);min-width:58px;font-variant-numeric:tabular-nums}
+button{font-family:var(--font-body);font-size:14px;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:8px;padding:7px 14px;cursor:pointer}
+button:hover{background:var(--soft)}
+button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+canvas{width:100%;display:block;border-radius:10px;background:var(--bg)}
+.calc{font-family:var(--font-mono);font-size:14px;background:var(--bg);border-radius:10px;padding:10px 14px;overflow-x:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--bg);border-radius:10px;padding:10px 14px;min-width:0}
+.stat span{display:block;font-size:12.5px;color:var(--muted)}
+.stat b{font-family:var(--font-mono);font-weight:500;font-size:20px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.hint{font-size:13.5px;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+.meaning{display:flex;flex-direction:column;gap:8px}
+.meaning h3{margin:0}
+mjx-container[display="true"]{margin:.4em 0 !important}
+footer{color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+</head>
+<body>
+<main>
+<header>
+  <div class="eyebrow">Machine learning · nhập môn</div>
+  <h1>Support Vector Machine</h1>
+  <p class="lede">SVM giải thích từ định nghĩa cơ bản. Mỗi công thức ghi rõ được suy ra từ công thức nào. Mỗi phần có một ví dụ thực tế và thí nghiệm tương tác đi kèm.</p>
+  <nav aria-label="Mục lục">
+    <a href="#s1">1 · Phân loại</a><a href="#s2">2 · Hyperplane</a><a href="#s3">3 · Margin</a><a href="#s4">4 · Tối ưu</a><a href="#s5">5 · Soft margin</a><a href="#s6">6 · Kernel</a><a href="#s7">7 · Cheatsheet</a>
+  </nav>
+</header>
+
+<section id="s1">
+  <h2><span class="n">01</span>Bài toán phân loại (classification)</h2>
+  <p>Ta có một tập dữ liệu (dataset) gồm $n$ điểm:</p>
+  <div class="eq">$$\mathcal{D}=\{(\mathbf{x}_i,y_i)\}_{i=1}^{n},\qquad \mathbf{x}_i\in\mathbb{R}^d,\qquad y_i\in\{-1,+1\}$$</div>
+  <ul>
+    <li>$\mathbf{x}_i$ là vector đặc trưng (feature vector): $d$ con số mô tả một đối tượng.</li>
+    <li>$y_i$ là nhãn (label) của đối tượng đó.</li>
+  </ul>
+  <p>Mục tiêu là tìm một hàm $f(\mathbf{x})$ dự đoán đúng nhãn cho điểm mới. SVM là thuật toán học có giám sát (supervised learning): nó học từ dữ liệu đã có nhãn và tìm đường ranh giới tốt nhất giữa hai lớp.</p>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Lọc email spam</div>
+    <p>Hộp thư cần quyết định mỗi email là spam ($y=+1$) hay thư thường ($y=-1$). Ta mô tả mỗi email bằng $d=2$ đặc trưng: $x_1$ là số đường link trong thư, $x_2$ là số lần xuất hiện từ khóa quảng cáo như "miễn phí", "khuyến mãi", "trúng thưởng".</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Email</th><th>Tiêu đề</th><th>$x_1$ link</th><th>$x_2$ từ khóa</th><th>Nhãn $y$</th></tr></thead>
+      <tbody>
+        <tr><td>A</td><td>Lịch họp nhóm thứ Hai</td><td class="num">1</td><td class="num">0</td><td class="num">−1</td></tr>
+        <tr><td>B</td><td>Trúng thưởng điện thoại, nhận quà miễn phí</td><td class="num">6</td><td class="num">4</td><td class="num">+1</td></tr>
+        <tr><td>C</td><td>Bản tin khoa CS tháng 10</td><td class="num">3</td><td class="num">1</td><td class="num">−1</td></tr>
+        <tr><td>D</td><td>Ưu đãi học phí khóa học online</td><td class="num">4</td><td class="num">2</td><td class="num">+1</td></tr>
+        <tr><td>E</td><td>Xác nhận đơn hàng #4821</td><td class="num">2</td><td class="num">1</td><td class="num">−1</td></tr>
+        <tr><td>F</td><td>Giảm giá 90% chỉ hôm nay</td><td class="num">8</td><td class="num">5</td><td class="num">+1</td></tr>
+      </tbody>
+    </table></div>
+    <p>Trong ký hiệu toán: email B có $\mathbf{x}_B=(6,4)$ và $y_B=+1$. Cả bảng chính là $\mathcal{D}$ với $n=6$. Ví dụ này sẽ được dùng lại ở phần 2 và 3.</p>
+  </div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">02</span>Siêu phẳng (hyperplane)</h2>
+  <p>Ranh giới mà SVM tìm là một siêu phẳng:</p>
+  <div class="eq">$$\mathbf{w}^\top\mathbf{x}+b=0 \tag{1}$$</div>
+  <ul>
+    <li>$\mathbf{w}$ là vector trọng số (weight vector), cũng là vector pháp tuyến (normal vector). Nó vuông góc với siêu phẳng và quyết định hướng của ranh giới.</li>
+    <li>$b$ là độ lệch (bias). Nó dịch siêu phẳng ra xa hoặc lại gần gốc tọa độ.</li>
+    <li>Trong 2D, (1) là một đường thẳng: $w_1x_1+w_2x_2+b=0$.</li>
+  </ul>
+  <p>Quy tắc dự đoán: điểm nằm phía nào của siêu phẳng thì thuộc lớp đó. <span class="from">← từ (1)</span></p>
+  <div class="eq">$$\hat{y}=\operatorname{sign}\left(\mathbf{w}^\top\mathbf{x}+b\right) \tag{2}$$</div>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Bộ lọc spam đã huấn luyện</div>
+    <p>Giả sử sau khi huấn luyện, bộ lọc có $\mathbf{w}=(0.6,\;0.9)$ và $b=-4.5$. Trọng số $w_2=0.9$ lớn hơn $w_1=0.6$, nghĩa là mỗi từ khóa quảng cáo "đáng ngờ" hơn mỗi đường link. Bias âm nghĩa là email phải có đủ nhiều dấu hiệu thì mới bị xem là spam. Dự đoán email B theo (2):</p>
+    <div class="eq">$$f(\mathbf{x}_B)=0.6\cdot6+0.9\cdot4-4.5=2.7&gt;0\;\Rightarrow\;\hat y_B=+1\;(\text{spam})$$</div>
+  </div>
+
+  <figure class="lab" aria-label="Thí nghiệm 1: bộ lọc spam">
+    <div class="labhead real">Thí nghiệm 1 · Tự soạn một email và xem bộ lọc quyết định</div>
+    <div class="controls">
+      <label for="sx1">Số link $x_1$<input type="range" id="sx1" min="0" max="10" step="1" value="4"><span class="val" id="sx1o">4</span></label>
+      <label for="sx2">Số từ khóa $x_2$<input type="range" id="sx2" min="0" max="8" step="1" value="2"><span class="val" id="sx2o">2</span></label>
+    </div>
+    <div class="calc" id="scalc">f(x) = …</div>
+    <canvas id="cvS"></canvas>
+    <div class="stats">
+      <div class="stat"><span>Điểm số f(x)</span><b id="sfa">—</b></div>
+      <div class="stat"><span>Khoảng cách d (phần 3)</span><b id="sfb">—</b></div>
+      <div class="stat"><span>Quyết định</span><b id="sfc">—</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--pos)"></i>email spam thật</span><span><i style="background:var(--neg)"></i>email thường thật</span><span><i style="background:var(--accent);border-radius:2px"></i>email bạn đang soạn</span><span>vùng tô = vùng bộ lọc dự đoán</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa</h3>
+    <ul>
+      <li>Toàn bộ "trí khôn" của bộ lọc chỉ là ba con số $w_1, w_2, b$. Dự đoán chỉ cần một phép nhân cộng, nên rất nhanh. Đó là lý do mô hình tuyến tính được dùng nhiều trong hệ thống thật.</li>
+      <li>Email D (ưu đãi học phí) là spam thật nhưng rơi vào vùng thư thường. Một ranh giới thẳng không bao giờ hoàn hảo; phần 5 sẽ xử lý chuyện này.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s3">
+  <h2><span class="n">03</span>Khoảng cách và lề (margin)</h2>
+  <h3>Khoảng cách từ một điểm đến siêu phẳng</h3>
+  <p>Lấy một điểm $\mathbf{x}_0$ nằm trên siêu phẳng, nên theo (1) ta có $\mathbf{w}^\top\mathbf{x}_0=-b$. Chiếu vector $(\mathbf{x}-\mathbf{x}_0)$ lên hướng đơn vị $\frac{\mathbf{w}}{\|\mathbf{w}\|}$:</p>
+  <div class="eq">$$\frac{\mathbf{w}^\top(\mathbf{x}-\mathbf{x}_0)}{\|\mathbf{w}\|}=\frac{\mathbf{w}^\top\mathbf{x}-\mathbf{w}^\top\mathbf{x}_0}{\|\mathbf{w}\|}=\frac{\mathbf{w}^\top\mathbf{x}+b}{\|\mathbf{w}\|}$$</div>
+  <p>Lấy trị tuyệt đối: <span class="from">← từ (1) + phép chiếu</span></p>
+  <div class="eq">$$d(\mathbf{x})=\frac{\left|\mathbf{w}^\top\mathbf{x}+b\right|}{\|\mathbf{w}\|} \tag{3}$$</div>
+  <h3>Lề hình học (geometric margin)</h3>
+  <p>Khi điểm được phân loại đúng, $y_i$ cùng dấu với $\mathbf{w}^\top\mathbf{x}_i+b$ theo (2). Vì vậy ta bỏ được trị tuyệt đối trong (3): <span class="from">← từ (2) + (3)</span></p>
+  <div class="eq">$$\gamma_i=\frac{y_i\left(\mathbf{w}^\top\mathbf{x}_i+b\right)}{\|\mathbf{w}\|} \tag{4}$$</div>
+  <ul>
+    <li>$\gamma_i&gt;0$: điểm được phân loại đúng.</li>
+    <li>$\gamma_i&lt;0$: điểm bị phân loại sai.</li>
+  </ul>
+  <p>Margin của cả mô hình là khoảng cách đến điểm gần nhất: $\gamma=\min_i\gamma_i$. Những điểm đạt giá trị nhỏ nhất gọi là <b>support vectors</b>. Chúng "chống đỡ" ranh giới, và đó là nguồn gốc tên gọi của thuật toán.</p>
+  <p class="note">Ý tưởng cốt lõi: có vô số đường tách được hai lớp, SVM chọn đường có margin lớn nhất (maximum margin). Lề rộng giúp mô hình an toàn hơn với điểm mới hơi lệch, nên tổng quát hóa (generalization) tốt hơn.</p>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Khoảng cách là "độ chắc chắn"</div>
+    <p>Với bộ lọc spam ở phần 2, ta có $\|\mathbf{w}\|=\sqrt{0.6^2+0.9^2}=\sqrt{1.17}\approx1.082$. Tính (3) và (4) cho hai email:</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Email</th><th>$f(\mathbf{x})$</th><th>$d$ theo (3)</th><th>$\gamma_i$ theo (4)</th><th>Diễn giải</th></tr></thead>
+      <tbody>
+        <tr><td>B (spam)</td><td class="num">2.7</td><td class="num">2.7 / 1.082 ≈ 2.50</td><td class="num">(+1)(2.7)/1.082 ≈ +2.50</td><td>Đúng và rất chắc chắn</td></tr>
+        <tr><td>D (spam)</td><td class="num">−0.3</td><td class="num">0.3 / 1.082 ≈ 0.28</td><td class="num">(+1)(−0.3)/1.082 ≈ −0.28</td><td>Sai, nhưng nằm sát ranh giới</td></tr>
+      </tbody>
+    </table></div>
+    <p>Trong hệ thống thật, khoảng cách được dùng làm điểm tin cậy (confidence score). Thư ở rất xa ranh giới có thể tự động xử lý. Thư sát ranh giới như D nên được đưa vào thư mục "Nghi ngờ" để người dùng tự quyết. Bạn có thể xem giá trị $d$ thay đổi trực tiếp trong thí nghiệm 1.</p>
+  </div>
+
+  <figure class="lab" aria-label="Thí nghiệm 2: xoay và dịch siêu phẳng">
+    <div class="labhead">Thí nghiệm 2 · Tự tìm margin lớn nhất</div>
+    <div class="controls">
+      <label for="th1">Góc của $\mathbf{w}$ (θ)<input type="range" id="th1" min="0" max="180" step="0.5" value="20"><span class="val" id="th1o">20°</span></label>
+      <label for="b1">Bias $b$<input type="range" id="b1" min="-4" max="4" step="0.01" value="0"><span class="val" id="b1o">0.00</span></label>
+      <button id="best1" type="button">Tìm margin lớn nhất</button>
+    </div>
+    <canvas id="cv1" style="height:340px"></canvas>
+    <div class="stats">
+      <div class="stat"><span>Margin γ (điểm gần nhất)</span><b id="m1a">—</b></div>
+      <div class="stat"><span>Độ rộng lề 2γ</span><b id="m1b">—</b></div>
+      <div class="stat"><span>Điểm phân loại sai</span><b id="m1c">0</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--pos)"></i>lớp +1</span><span><i style="background:var(--neg)"></i>lớp −1</span><span><i style="background:transparent;border:1.5px solid var(--ink)"></i>support vector</span><span><i style="background:transparent;border:2px solid var(--err)"></i>phân loại sai</span><span><i style="background:var(--accent);border-radius:2px"></i>hướng của w</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa</h3>
+    <ul>
+      <li>Widget giữ $\|\mathbf{w}\|=1$, nên theo (4) ta có $\gamma_i=y_i(\mathbf{w}^\top\mathbf{x}_i+b)$.</li>
+      <li>Nhiều góc θ đều tách đúng hai lớp (0 điểm sai), nhưng margin của mỗi góc khác nhau.</li>
+      <li>Khi bấm "Tìm margin lớn nhất", đường ranh giới nằm chính giữa hai lớp và chỉ vài điểm được khoanh tròn. Di chuyển một điểm không phải support vector sẽ không làm đổi ranh giới.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">04</span>Từ "lề lớn nhất" đến bài toán tối ưu</h2>
+  <h3>Bước 1 · Chuẩn hóa</h3>
+  <p>Với mọi $k&gt;0$, cặp $(k\mathbf{w},kb)$ cho cùng một siêu phẳng với $(\mathbf{w},b)$, vì $k\mathbf{w}^\top\mathbf{x}+kb=0 \iff \mathbf{w}^\top\mathbf{x}+b=0$. Vậy ta được tự do chọn tỉ lệ sao cho: <span class="from">← từ (1)</span></p>
+  <div class="eq">$$\min_i\; y_i\left(\mathbf{w}^\top\mathbf{x}_i+b\right)=1 \tag{5}$$</div>
+  <h3>Bước 2 · Margin theo w</h3>
+  <p>Thay (5) vào (4), tử số của điểm gần nhất bằng 1: <span class="from">← từ (4) + (5)</span></p>
+  <div class="eq">$$\gamma=\frac{1}{\|\mathbf{w}\|}\quad\Rightarrow\quad\text{độ rộng lề}=\frac{2}{\|\mathbf{w}\|} \tag{6}$$</div>
+  <h3>Bước 3 · Hard-margin SVM</h3>
+  <p>Muốn lề lớn nhất thì $\|\mathbf{w}\|$ phải nhỏ nhất. Điều kiện (5) trở thành ràng buộc cho mọi điểm: <span class="from">← từ (6)</span></p>
+  <div class="eq">$$\min_{\mathbf{w},\,b}\;\frac{1}{2}\|\mathbf{w}\|^2\quad\text{s.t.}\quad y_i\left(\mathbf{w}^\top\mathbf{x}_i+b\right)\ge 1,\;\;\forall i \tag{7}$$</div>
+  <p>Ta dùng $\frac{1}{2}\|\mathbf{w}\|^2$ thay cho $\|\mathbf{w}\|$ vì hàm này lồi (convex) và có gradient gọn: $\nabla_{\mathbf{w}}\tfrac{1}{2}\|\mathbf{w}\|^2=\mathbf{w}$. Hai đường nét đứt trong thí nghiệm 2 chính là $\mathbf{w}^\top\mathbf{x}+b=\pm1$.</p>
+
+  <h3>Ví dụ tính tay (worked example)</h3>
+  <p>Cho $\mathbf{x}_1=(1,1)$ với $y_1=+1$, và $\mathbf{x}_2=(-1,-1)$ với $y_2=-1$.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Bước</th><th>Tính toán</th><th>Dựa trên</th></tr></thead>
+    <tbody>
+      <tr><td>Đối xứng</td><td>Hai điểm đối xứng qua gốc nên đoán $\mathbf{w}=(a,a)$, $b=0$</td><td>Trực giác</td></tr>
+      <tr><td>Ràng buộc</td><td>$y_1(\mathbf{w}^\top\mathbf{x}_1+b)=2a\ge1\Rightarrow a\ge\tfrac12$</td><td>(7)</td></tr>
+      <tr><td>Tối ưu</td><td>$\tfrac12\|\mathbf{w}\|^2=a^2$ nhỏ nhất khi $a=\tfrac12$</td><td>(7)</td></tr>
+      <tr><td>Kết quả</td><td>$\mathbf{w}=(\tfrac12,\tfrac12)$, $\|\mathbf{w}\|=\tfrac{\sqrt2}{2}\approx0.707$</td><td></td></tr>
+      <tr><td>Độ rộng lề</td><td>$\dfrac{2}{\|\mathbf{w}\|}=2\sqrt2\approx2.83$</td><td>(6)</td></tr>
+      <tr><td>Kiểm tra</td><td>$\|\mathbf{x}_1-\mathbf{x}_2\|=\sqrt{2^2+2^2}=2\sqrt2$ ✓</td><td></td></tr>
+      <tr><td>Dự đoán $(2,0)$</td><td>$\mathbf{w}^\top\mathbf{x}+b=1&gt;0\Rightarrow\hat y=+1$</td><td>(2)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Phân loại hoa Iris</div>
+    <p>Bộ dữ liệu Iris (Fisher, 1936) là bộ dữ liệu kinh điển trong ML. Ta lấy 20 bông thuộc hai loài Iris setosa ($y=-1$) và Iris versicolor ($y=+1$), mô tả bằng $x_1$ là chiều dài cánh hoa (petal length, cm) và $x_2$ là chiều rộng cánh hoa (petal width, cm). Hai loài này tách được hoàn toàn bằng một đường thẳng, nên ta giải đúng bài toán hard-margin (7).</p>
+  </div>
+
+  <figure class="lab" aria-label="Thí nghiệm 3: hard-margin SVM trên dữ liệu Iris">
+    <div class="labhead real">Thí nghiệm 3 · Hard-margin SVM trên hoa Iris — chạm vào biểu đồ để thêm một bông hoa mới</div>
+    <canvas id="cvI" tabindex="0" aria-label="Biểu đồ Iris, chạm để đặt bông hoa mới"></canvas>
+    <div class="calc" id="icalc">…</div>
+    <div class="stats">
+      <div class="stat"><span>Độ rộng lề 2/‖w‖</span><b id="ia">—</b></div>
+      <div class="stat"><span>Support vectors</span><b id="ib">—</b></div>
+      <div class="stat"><span>Bông hoa mới</span><b id="ic">Chạm biểu đồ</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--neg)"></i>setosa (−1)</span><span><i style="background:var(--pos)"></i>versicolor (+1)</span><span><i style="background:transparent;border:1.5px solid var(--ink)"></i>support vector</span><span><i style="background:var(--accent);border-radius:2px"></i>bông hoa mới</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa</h3>
+    <ul>
+      <li>Kết quả $\mathbf{w}$ và $b$ thỏa đúng (5): các support vector có $y_i(\mathbf{w}^\top\mathbf{x}_i+b)=1$, tức nằm đúng trên đường nét đứt.</li>
+      <li>Support vectors là những bông "khó phân biệt nhất": bông setosa có cánh to nhất và bông versicolor có cánh nhỏ nhất. 18 bông còn lại không ảnh hưởng đến ranh giới.</li>
+      <li>Nhà thực vật học chỉ cần đo hai con số rồi áp dụng (2) là biết loài. Bông nằm trong vùng lề (giữa hai nét đứt) là trường hợp đáng kiểm tra lại.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s5">
+  <h2><span class="n">05</span>Soft margin: khi dữ liệu không tách được</h2>
+  <p>Dữ liệu thật thường có nhiễu (noise) và ngoại lệ (outlier), nên ràng buộc (7) không thể thỏa cho mọi điểm. Ta cho mỗi điểm một biến chùng (slack variable) $\xi_i\ge0$ để nới lỏng ràng buộc: <span class="from">← nới lỏng (7)</span></p>
+  <div class="eq">$$y_i\left(\mathbf{w}^\top\mathbf{x}_i+b\right)\ge 1-\xi_i \tag{8}$$</div>
+  <div class="tbl"><table>
+    <thead><tr><th>Giá trị</th><th>Vị trí của điểm</th></tr></thead>
+    <tbody>
+      <tr><td>$\xi_i=0$</td><td>Ngoài lề, hoàn toàn ổn</td></tr>
+      <tr><td>$0&lt;\xi_i&lt;1$</td><td>Trong lề nhưng vẫn đúng phía</td></tr>
+      <tr><td>$\xi_i&gt;1$</td><td>Sai phía, tức phân loại sai</td></tr>
+    </tbody>
+  </table></div>
+  <p>Thêm khoản phạt cho tổng vi phạm vào hàm mục tiêu (7): <span class="from">← từ (7) + (8)</span></p>
+  <div class="eq">$$\min_{\mathbf{w},\,b,\,\boldsymbol{\xi}}\;\frac{1}{2}\|\mathbf{w}\|^2+C\sum_{i=1}^{n}\xi_i \tag{9}$$</div>
+  <p>Từ (8), giá trị $\xi_i$ nhỏ nhất hợp lệ chính là <b>hinge loss</b>: <span class="from">← từ (8)</span></p>
+  <div class="eq">$$\xi_i=\max\left(0,\;1-y_i\left(\mathbf{w}^\top\mathbf{x}_i+b\right)\right) \tag{10}$$</div>
+  <p>Như vậy SVM có thể hiểu là "hinge loss + regularization $\tfrac12\|\mathbf{w}\|^2$". Siêu tham số (hyperparameter) $C$ điều chỉnh sự đánh đổi (trade-off) giữa lề rộng và ít lỗi.</p>
+  <p>Áp dụng (10) cho email D ở phần 3: theo thang của bộ lọc, $y_D f(\mathbf{x}_D)=-0.3$, nên $\xi_D=\max(0,\,1-(-0.3))=1.3&gt;1$. Email D bị phân loại sai, và (9) phạt nó $C\times1.3$.</p>
+
+  <figure class="lab" aria-label="Thí nghiệm 4: thay đổi C">
+    <div class="labhead">Thí nghiệm 4 · Kéo C và xem lề thay đổi</div>
+    <div class="controls">
+      <label for="lc2">$C$ (thang log)<input type="range" id="lc2" min="-2" max="2" step="0.1" value="0"><span class="val" id="lc2o">C = 1</span></label>
+    </div>
+    <canvas id="cv2" style="height:340px"></canvas>
+    <div class="stats">
+      <div class="stat"><span>Độ rộng lề 2/‖w‖</span><b id="m2a">—</b></div>
+      <div class="stat"><span>Số support vector</span><b id="m2b">—</b></div>
+      <div class="stat"><span>Lỗi trên tập train</span><b id="m2c">—</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--pos)"></i>lớp +1</span><span><i style="background:var(--neg)"></i>lớp −1</span><span><i style="background:transparent;border:1.5px solid var(--ink)"></i>support vector (αᵢ &gt; 0)</span><span><i style="background:transparent;border:2px solid var(--err)"></i>phân loại sai</span><span>nét liền: w·x+b = 0 · nét đứt: ±1</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa của C</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>$C$</th><th>Phạt vi phạm</th><th>Lề</th><th>Support vectors</th><th>Rủi ro</th></tr></thead>
+      <tbody>
+        <tr><td>Nhỏ (0.01)</td><td>Nhẹ</td><td>Rộng</td><td>Nhiều</td><td>Underfitting: chấp nhận nhiều lỗi</td></tr>
+        <tr><td>Lớn (100)</td><td>Rất nặng</td><td>Hẹp, cố né từng outlier</td><td>Ít</td><td>Overfitting: bị outlier kéo lệch</td></tr>
+      </tbody>
+    </table></div>
+    <p>Trên thực tế, $C$ được chọn bằng cross-validation.</p>
+  </div>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Duyệt khoản vay và một khách hàng ngoại lệ</div>
+    <p>Một công ty tài chính dự đoán khách hàng sẽ trả nợ đúng hạn ($y=+1$) hay trả trễ ($y=-1$). Hai đặc trưng là $x_1$ thu nhập (triệu đồng/tháng) và $x_2$ tỉ lệ nợ trên thu nhập (debt-to-income, %). Trong dữ liệu có một khách hàng ngoại lệ: thu nhập 12 triệu, nợ 34%, nhưng vẫn trả đúng hạn, trong khi những người có hoàn cảnh tương tự đều trả trễ. Có thể người này được người thân hỗ trợ.</p>
+    <p>Câu hỏi thực tế là có nên để một trường hợp hiếm này thay đổi chính sách duyệt vay cho mọi khách hàng sau này hay không. Hãy kéo điểm ngoại lệ và so sánh hai mô hình.</p>
+  </div>
+
+  <figure class="lab" aria-label="Thí nghiệm 5: outlier trong dữ liệu vay">
+    <div class="labhead real">Thí nghiệm 5 · Kéo khách hàng ngoại lệ, so sánh C nhỏ và C lớn</div>
+    <div class="controls">
+      <button id="lo" type="button">Bỏ khách hàng ngoại lệ</button>
+      <span class="hint">Kéo chấm viền xanh tím để di chuyển khách hàng ngoại lệ.</span>
+    </div>
+    <canvas id="cvL" style="touch-action:none" aria-label="Biểu đồ dữ liệu vay, kéo điểm ngoại lệ"></canvas>
+    <div class="stats">
+      <div class="stat"><span>C = 0.1 · khách mới (18 tr, nợ 45%)</span><b id="la">—</b></div>
+      <div class="stat"><span>C = 100 · khách mới (18 tr, nợ 45%)</span><b id="lb">—</b></div>
+      <div class="stat"><span>Dự đoán sai trên tập train (C nhỏ / C lớn)</span><b id="lc">—</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--pos)"></i>trả đúng hạn (+1)</span><span><i style="background:var(--neg)"></i>trả trễ (−1)</span><span><i style="background:var(--muted);border-radius:2px"></i>ranh giới C = 0.1</span><span><i style="background:var(--accent);border-radius:2px"></i>ranh giới C = 100</span><span>◇ khách mới</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa</h3>
+    <ul>
+      <li>Với $C=100$, mô hình bị phạt rất nặng nếu phân loại sai khách ngoại lệ, nên ranh giới bị kéo lệch mạnh. Hệ quả là quyết định cho một khách mới hoàn toàn khác có thể bị lật.</li>
+      <li>Với $C=0.1$, mô hình chấp nhận sai một điểm. Đổi lại, ranh giới gần như giữ nguyên vì nó phản ánh xu hướng chung của đa số khách hàng.</li>
+      <li>Bấm "Bỏ khách hàng ngoại lệ" để thấy hai mô hình gần như trùng nhau khi dữ liệu sạch. Khác biệt chỉ xuất hiện khi có nhiễu, và đó là lúc $C$ thật sự quan trọng.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s6">
+  <h2><span class="n">06</span>Dạng đối ngẫu (dual) và kernel trick</h2>
+  <p>Giải (9) bằng phương pháp nhân tử Lagrange (Lagrange multipliers): mỗi ràng buộc (8) được gán một hệ số $\alpha_i\ge0$. Đặt đạo hàm của hàm Lagrange theo $\mathbf{w}$ bằng 0: <span class="from">← từ (9), ∂L/∂w = 0</span></p>
+  <div class="eq">$$\frac{\partial\mathcal{L}}{\partial\mathbf{w}}=0\;\Rightarrow\;\mathbf{w}=\sum_{i=1}^{n}\alpha_i y_i\mathbf{x}_i,\qquad 0\le\alpha_i\le C \tag{11}$$</div>
+  <p>Chỉ các support vector mới có $\alpha_i&gt;0$. Đó là lý do thí nghiệm 4 khoanh tròn các điểm có $\alpha_i&gt;0$. Thay (11) vào (2): <span class="from">← từ (2) + (11)</span></p>
+  <div class="eq">$$f(\mathbf{x})=\operatorname{sign}\left(\sum_{i=1}^{n}\alpha_i y_i\,\mathbf{x}_i^\top\mathbf{x}+b\right) \tag{12}$$</div>
+  <p>Điểm then chốt: dữ liệu chỉ xuất hiện qua tích vô hướng (dot product) $\mathbf{x}_i^\top\mathbf{x}$. Ta ánh xạ dữ liệu lên không gian nhiều chiều hơn bằng hàm $\phi$ (feature map), rồi thay tích vô hướng trong (12) bằng một kernel: <span class="from">← thay vào (12)</span></p>
+  <div class="eq">$$K(\mathbf{x}_i,\mathbf{x})=\phi(\mathbf{x}_i)^\top\phi(\mathbf{x}) \tag{13}$$</div>
+  <p>Ta tính được kết quả như thể đang làm việc ở không gian cao chiều, mà không cần tính $\phi$ một cách tường minh.</p>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Nhiệt độ phòng dễ chịu</div>
+    <p>Một hệ thống nhà thông minh học xem người dùng có thấy dễ chịu không. Đặc trưng là $x$, độ lệch nhiệt độ so với 24 °C. Người dùng thấy dễ chịu ($+1$) khi nhiệt độ gần 24 °C, và khó chịu ($-1$) khi quá lạnh hoặc quá nóng. Không có một ngưỡng $x&gt;t$ nào tách được hai trường hợp, vì lớp $-1$ nằm ở cả hai phía.</p>
+  </div>
+
+  <figure class="lab" aria-label="Thí nghiệm 6: nâng chiều dữ liệu 1D">
+    <div class="labhead real">Thí nghiệm 6 · Nâng 1D lên 2D bằng φ(x) = (x, x²)</div>
+    <div class="controls">
+      <button id="lift3" type="button">Nâng lên 2D</button>
+      <label for="c3">Ngưỡng $c$ (đường $z=c$)<input type="range" id="c3" min="0.2" max="8" step="0.1" value="5"><span class="val" id="c3o">5.0</span></label>
+    </div>
+    <canvas id="cv3" style="height:320px"></canvas>
+    <div class="stats">
+      <div class="stat"><span>Phân loại đúng</span><b id="m3a">—</b></div>
+      <div class="stat"><span>Vùng dễ chịu trong không gian gốc</span><b id="m3b">—</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--pos)"></i>dễ chịu (+1)</span><span><i style="background:var(--neg)"></i>quá lạnh hoặc quá nóng (−1)</span><span><i style="background:var(--accent);border-radius:2px"></i>ngưỡng ±√c trên trục x</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa</h3>
+    <ul>
+      <li>Sau khi nâng lên 2D, một đường thẳng ngang $z=c$ tách được hai lớp. Đây là bài toán tuyến tính mà (7) giải được.</li>
+      <li>Chiếu ngược về 1D, đường thẳng đó thành hai ngưỡng $|x|=\sqrt{c}$, tức là một ranh giới phi tuyến (non-linear). Với $c\in(1.21,\,3.24)$, bạn phân loại đúng 13/13 điểm. Khi đó vùng dễ chịu xấp xỉ 24 ± 1.5 °C.</li>
+      <li>Kernel tương ứng, suy ra từ (13): $K(x,x')=\phi(x)^\top\phi(x')=x\,x'+x^2x'^2$.</li>
+    </ul>
+  </div>
+
+  <h3>Các kernel phổ biến</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Kernel</th><th>$K(\mathbf{x},\mathbf{x}')$</th><th>Dùng khi</th></tr></thead>
+    <tbody>
+      <tr><td>Linear</td><td>$\mathbf{x}^\top\mathbf{x}'$</td><td>Dữ liệu gần tách tuyến tính, số chiều cao (văn bản)</td></tr>
+      <tr><td>Polynomial</td><td>$\left(\mathbf{x}^\top\mathbf{x}'+r\right)^p$</td><td>Tương tác bậc $p$ giữa các đặc trưng</td></tr>
+      <tr><td>RBF (Gaussian)</td><td>$\exp\left(-\dfrac{\|\mathbf{x}-\mathbf{x}'\|^2}{2\sigma^2}\right)$</td><td>Mặc định phổ biến; tương ứng không gian vô hạn chiều</td></tr>
+    </tbody>
+  </table></div>
+  <p>Ý nghĩa trực quan của RBF: $K$ đo độ "gần nhau" của hai điểm. Nếu hai điểm trùng nhau thì $K=1$; càng xa nhau thì $K$ càng tiến về 0. Tham số $\sigma$ quyết định "bao xa thì vẫn được tính là gần". Theo (12), mỗi support vector tạo ra một "ngọn đồi" ảnh hưởng quanh nó, và ranh giới là đường đồng mức $f=0$ của tổng các ngọn đồi đó.</p>
+
+  <div class="story">
+    <div class="tag">Ví dụ thực tế · Vùng giao hàng trong 2 giờ</div>
+    <p>Một cửa hàng có hai kho ở hai khu của thành phố. Mỗi đơn hàng là một điểm trên bản đồ (km). Đơn được giao trong 2 giờ là $+1$, đơn bị trễ là $-1$. Vùng giao nhanh là hai cụm quanh hai kho. Không đường thẳng nào, hay cả $\phi(x)=(x,x^2)$ đơn giản, mô tả được hình dạng này. Kernel RBF thì làm được.</p>
+  </div>
+
+  <figure class="lab" aria-label="Thí nghiệm 7: SVM kernel RBF cho vùng giao hàng">
+    <div class="labhead real">Thí nghiệm 7 · Kernel RBF học vùng giao hàng</div>
+    <div class="controls">
+      <label for="rs">Bán kính ảnh hưởng $\sigma$ (km)<input type="range" id="rs" min="0.25" max="3" step="0.05" value="1"><span class="val" id="rso">1.00</span></label>
+      <label for="rc">$C$ (thang log)<input type="range" id="rc" min="-1" max="3" step="0.1" value="1"><span class="val" id="rco">C = 10</span></label>
+      <button id="rlin" type="button">So sánh với kernel tuyến tính</button>
+    </div>
+    <canvas id="cvR"></canvas>
+    <div class="stats">
+      <div class="stat"><span>Kernel đang dùng</span><b id="ra">RBF</b></div>
+      <div class="stat"><span>Đúng trên tập train</span><b id="rb">—</b></div>
+      <div class="stat"><span>Số support vector</span><b id="rcn">—</b></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--pos)"></i>giao kịp 2 giờ (+1)</span><span><i style="background:var(--neg)"></i>giao trễ (−1)</span><span><i style="background:transparent;border:1.5px solid var(--ink)"></i>support vector</span><span><i style="background:var(--ink);border-radius:2px"></i>kho hàng</span><span>vùng tô = dự đoán của mô hình</span></div>
+  </figure>
+  <div class="meaning">
+    <h3>Ý nghĩa</h3>
+    <ul>
+      <li>$\sigma$ khoảng 0.8–1.2 km cho hai vùng tròn gọn quanh hai kho, khớp với thực tế.</li>
+      <li>$\sigma$ rất nhỏ (0.25): mỗi điểm chỉ ảnh hưởng ngay xung quanh nó, nên ranh giới thành nhiều "đảo" nhỏ ôm sát từng đơn hàng. Đây là overfitting, mô hình học thuộc lòng dữ liệu.</li>
+      <li>$\sigma$ rất lớn (3): mọi điểm đều "gần nhau", nên ranh giới trở nên thô, gần với ranh giới tuyến tính. Đây là underfitting.</li>
+      <li>Kernel tuyến tính chỉ vẽ được một đường thẳng, nên không thể mô tả hai vùng giao hàng tách rời.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="s7">
+  <h2><span class="n">07</span>Cheatsheet</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Công thức</th><th>Ý nghĩa</th><th>Từ</th></tr></thead>
+    <tbody>
+      <tr><td>(1)</td><td>$\mathbf{w}^\top\mathbf{x}+b=0$</td><td>Hyperplane</td><td>Định nghĩa</td></tr>
+      <tr><td>(2)</td><td>$\hat y=\operatorname{sign}(\mathbf{w}^\top\mathbf{x}+b)$</td><td>Dự đoán</td><td>(1)</td></tr>
+      <tr><td>(3)</td><td>$d=\dfrac{|\mathbf{w}^\top\mathbf{x}+b|}{\|\mathbf{w}\|}$</td><td>Khoảng cách</td><td>(1) + phép chiếu</td></tr>
+      <tr><td>(4)</td><td>$\gamma_i=\dfrac{y_i(\mathbf{w}^\top\mathbf{x}_i+b)}{\|\mathbf{w}\|}$</td><td>Geometric margin</td><td>(2) + (3)</td></tr>
+      <tr><td>(5)</td><td>$\min_i y_i(\mathbf{w}^\top\mathbf{x}_i+b)=1$</td><td>Chuẩn hóa tỉ lệ</td><td>(1)</td></tr>
+      <tr><td>(6)</td><td>$\dfrac{2}{\|\mathbf{w}\|}$</td><td>Độ rộng lề</td><td>(4) + (5)</td></tr>
+      <tr><td>(7)</td><td>$\min\tfrac12\|\mathbf{w}\|^2$ s.t. $y_i(\mathbf{w}^\top\mathbf{x}_i+b)\ge1$</td><td>Hard margin</td><td>(6)</td></tr>
+      <tr><td>(9)</td><td>$\min\tfrac12\|\mathbf{w}\|^2+C\sum_i\xi_i$</td><td>Soft margin</td><td>(7) + (8)</td></tr>
+      <tr><td>(10)</td><td>$\max(0,\,1-y_if(\mathbf{x}_i))$</td><td>Hinge loss</td><td>(8)</td></tr>
+      <tr><td>(11)</td><td>$\mathbf{w}=\sum_i\alpha_iy_i\mathbf{x}_i$</td><td>SV: $\alpha_i&gt;0$</td><td>$\partial\mathcal L/\partial\mathbf w=0$</td></tr>
+      <tr><td>(13)</td><td>$f(\mathbf{x})=\operatorname{sign}\left(\sum_i\alpha_iy_iK(\mathbf{x}_i,\mathbf{x})+b\right)$</td><td>Kernel SVM</td><td>(11) → (2)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>SVM trong thực tế</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Ứng dụng</th><th>Đặc trưng $\mathbf{x}$</th><th>Kernel thường dùng</th><th>Vì sao hợp với SVM</th></tr></thead>
+    <tbody>
+      <tr><td>Phân loại văn bản, lọc spam</td><td>Tần suất từ (TF-IDF), hàng chục nghìn chiều</td><td>Linear</td><td>Số chiều rất cao nên dữ liệu thường gần tách tuyến tính</td></tr>
+      <tr><td>Phát hiện người đi bộ trong ảnh</td><td>Đặc trưng HOG từ ảnh</td><td>Linear</td><td>Dự đoán nhanh, chạy được trên camera</td></tr>
+      <tr><td>Tin sinh học, phân loại gen</td><td>Mức biểu hiện gen, ít mẫu nhưng nhiều chiều</td><td>Linear hoặc RBF</td><td>Margin lớn giúp chống overfitting khi ít dữ liệu</td></tr>
+      <tr><td>Nhận dạng chữ viết tay</td><td>Pixel ảnh</td><td>RBF, Polynomial</td><td>Ranh giới giữa các chữ số là phi tuyến</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Hạn chế cần nhớ: SVM với kernel cần ma trận kernel kích thước $n\times n$, nên chậm khi $n$ lên đến hàng trăm nghìn mẫu. SVM cũng không cho ra xác suất trực tiếp, và rất nhạy với thang đo của đặc trưng, nên luôn cần chuẩn hóa (standardize) dữ liệu trước khi huấn luyện.</p>
+</section>
+
+<footer>Bước tiếp theo nên học: suy dẫn đầy đủ bài toán dual bằng điều kiện KKT, và thực hành <code>sklearn.svm.SVC</code> với kernel RBF, tinh chỉnh $C$ và $\gamma=\tfrac{1}{2\sigma^2}$.</footer>
+</main>
+
+<script>
+window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},svg:{fontCache:'global'},options:{skipHtmlTags:['script','noscript','style','textarea','canvas']}};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js"></script>
+<script>
+(function(){
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#888888';
+const redraws=[];
+const MONO='12px "JetBrains Mono", ui-monospace, monospace';
+function setup(cv){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);const ctx=cv.getContext('2d');ctx.setTransform(d,0,0,d,0,0);return{ctx,W:r.width,H:r.height};}
+function hexRgba(h,a){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h.slice(0,6),16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+function seg(ctx,X,Y,a,q,c){let p;if(Math.abs(q)>Math.abs(a)){p=[[-30,-(c+a*-30)/q],[30,-(c+a*30)/q]];}else{p=[[-(c+q*-30)/a,-30],[-(c+q*30)/a,30]];}ctx.beginPath();ctx.moveTo(X(p[0][0]),Y(p[0][1]));ctx.lineTo(X(p[1][0]),Y(p[1][1]));ctx.stroke();}
+function segR(ctx,X,Y,a,q,c,x0,x1,y0,y1){let p;if(Math.abs(q)>1e-12&&Math.abs(a)*(x1-x0)<=Math.abs(q)*(y1-y0)){p=[[x0,-(c+a*x0)/q],[x1,-(c+a*x1)/q]];}else if(Math.abs(a)>1e-12){p=[[-(c+q*y0)/a,y0],[-(c+q*y1)/a,y1]];}else return;ctx.beginPath();ctx.moveTo(X(p[0][0]),Y(p[0][1]));ctx.lineTo(X(p[1][0]),Y(p[1][1]));ctx.stroke();}
+function halfPoly(rect,a,q,c){const out=[];for(let i=0;i<rect.length;i++){const P=rect[i],Q=rect[(i+1)%rect.length],fp=a*P[0]+q*P[1]+c,fq=a*Q[0]+q*Q[1]+c;if(fp>=0)out.push(P);if((fp>=0)!==(fq>=0)){const t=fp/(fp-fq);out.push([P[0]+t*(Q[0]-P[0]),P[1]+t*(Q[1]-P[1])]);}}return out;}
+function fillPoly(ctx,X,Y,pts,col){if(pts.length<3)return;ctx.beginPath();pts.forEach((p,i)=>{i?ctx.lineTo(X(p[0]),Y(p[1])):ctx.moveTo(X(p[0]),Y(p[1]));});ctx.closePath();ctx.fillStyle=col;ctx.fill();}
+function circ(ctx,x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);}
+function diamond(ctx,x,y,r){ctx.beginPath();ctx.moveTo(x,y-r);ctx.lineTo(x+r,y);ctx.lineTo(x,y+r);ctx.lineTo(x-r,y);ctx.closePath();}
+function axes(ctx,W,H,X,Y){ctx.strokeStyle=css('--line');ctx.lineWidth=1;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(0,Y(0));ctx.lineTo(W,Y(0));ctx.moveTo(X(0),0);ctx.lineTo(X(0),H);ctx.stroke();}
+function plot(cv,xr,yr,opt){const W0=cv.clientWidth||600,span=W0-62;let sx=span/(xr[1]-xr[0]),sy;
+ if(opt.equal){sx=Math.min(sx,opt.maxS);sy=sx;cv.style.height=Math.round((yr[1]-yr[0])*sy+56)+'px';}else{cv.style.height=opt.height+'px';sy=(opt.height-56)/(yr[1]-yr[0]);}
+ const o=setup(cv);const offX=48+((o.W-62)-(xr[1]-xr[0])*sx)/2;
+ o.X=v=>offX+(v-xr[0])*sx;o.Y=v=>o.H-42-(v-yr[0])*sy;o.inv=(px,py)=>[(px-offX)/sx+xr[0],(o.H-42-py)/sy+yr[0]];o.sx=sx;o.sy=sy;
+ o.rect=[[xr[0],yr[0]],[xr[1],yr[0]],[xr[1],yr[1]],[xr[0],yr[1]]];
+ o.clip=()=>{o.ctx.save();o.ctx.beginPath();o.ctx.rect(o.X(xr[0]),o.Y(yr[1]),(xr[1]-xr[0])*sx,(yr[1]-yr[0])*sy);o.ctx.clip();};return o;}
+function frame(o,xs,ys,xlab,ylab){const ctx=o.ctx,X=o.X,Y=o.Y,m=css('--muted'),l=css('--line');ctx.font=MONO;ctx.lineWidth=1;ctx.setLineDash([]);
+ xs.forEach(v=>{ctx.strokeStyle=l;ctx.beginPath();ctx.moveTo(X(v),Y(ys[0]));ctx.lineTo(X(v),Y(ys[ys.length-1]));ctx.stroke();ctx.fillStyle=m;ctx.textAlign='center';ctx.fillText(String(v),X(v),Y(ys[0])+16);});
+ ys.forEach(v=>{ctx.strokeStyle=l;ctx.beginPath();ctx.moveTo(X(xs[0]),Y(v));ctx.lineTo(X(xs[xs.length-1]),Y(v));ctx.stroke();ctx.fillStyle=m;ctx.textAlign='right';ctx.fillText(String(v),X(xs[0])-6,Y(v)+4);});
+ ctx.textAlign='right';ctx.fillStyle=m;ctx.fillText(xlab,X(xs[xs.length-1]),Y(ys[0])+33);
+ ctx.save();ctx.translate(X(xs[0])-34,Y(ys[ys.length-1]));ctx.rotate(-Math.PI/2);ctx.textAlign='right';ctx.fillText(ylab,0,0);ctx.restore();ctx.textAlign='left';}
+function range(a,b,s){const r=[];for(let v=a;v<=b+1e-9;v+=s)r.push(Math.round(v*100)/100);return r;}
+function trainLin(D,C,ep){const n=D.length,a=new Array(n).fill(0),w=[0,0,0];for(let e=0;e<ep;e++){for(let i=0;i<n;i++){const x1=D[i][0],x2=D[i][1],y=D[i][2],q=x1*x1+x2*x2+1,G=y*(w[0]*x1+w[1]*x2+w[2])-1,na=Math.min(Math.max(a[i]-G/q,0),C),d=(na-a[i])*y;if(d){w[0]+=d*x1;w[1]+=d*x2;w[2]+=d;a[i]=na;}}}return{w,a};}
+
+/* Thí nghiệm 1 · spam */
+(function(){
+const E=[['A',1,0,-1],['B',6,4,1],['C',3,1,-1],['D',4,2,1],['E',2,1,-1],['F',8,5,1]];
+const w=[0.6,0.9],b=-4.5,nw=Math.hypot(0.6,0.9);
+const cv=document.getElementById('cvS'),s1=document.getElementById('sx1'),s2=document.getElementById('sx2');
+function draw(){const x1=+s1.value,x2=+s2.value,f=w[0]*x1+w[1]*x2+b;
+document.getElementById('sx1o').textContent=x1;document.getElementById('sx2o').textContent=x2;
+document.getElementById('scalc').textContent='f(x) = 0.6·'+x1+' + 0.9·'+x2+' − 4.5 = '+f.toFixed(2)+(f>0?'  > 0  ⇒  ŷ = +1':'  ≤ 0  ⇒  ŷ = −1');
+document.getElementById('sfa').textContent=f.toFixed(2);document.getElementById('sfb').textContent=(Math.abs(f)/nw).toFixed(2);
+document.getElementById('sfc').textContent=f>0?'Spam':(Math.abs(f)/nw<0.5?'Nghi ngờ':'Hộp thư chính');
+const o=plot(cv,[0,10],[0,8],{equal:true,maxS:34}),ctx=o.ctx,X=o.X,Y=o.Y;ctx.clearRect(0,0,o.W,o.H);
+const pos=css('--pos'),neg=css('--neg'),ink=css('--ink'),ac=css('--accent');
+o.clip();fillPoly(ctx,X,Y,o.rect,hexRgba(neg,0.10));fillPoly(ctx,X,Y,halfPoly(o.rect,w[0],w[1],b),hexRgba(pos,0.13));ctx.restore();
+frame(o,range(0,10,2),range(0,8,2),'số link x₁','số từ khóa x₂');
+o.clip();ctx.strokeStyle=ink;ctx.lineWidth=2;segR(ctx,X,Y,w[0],w[1],b,0,10,0,8);ctx.restore();
+ctx.font=MONO;E.forEach(e=>{circ(ctx,X(e[1]),Y(e[2]),6);ctx.fillStyle=e[3]>0?pos:neg;ctx.fill();ctx.fillStyle=ink;ctx.fillText(e[0],X(e[1])+8,Y(e[2])-7);});
+diamond(ctx,X(x1),Y(x2),9);ctx.strokeStyle=ac;ctx.lineWidth=2.5;ctx.stroke();}
+s1.addEventListener('input',draw);s2.addEventListener('input',draw);redraws.push(draw);draw();
+})();
+
+/* Thí nghiệm 2 · margin */
+(function(){
+const P=[[2,3,1],[3,1.5,1],[1.5,1,1],[4,3,1],[3,4,1],[1,3.5,1],[-2,-1,-1],[-1,-3,-1],[-3,-2,-1],[0,-2.5,-1],[-2,1,-1],[-3.5,0.5,-1]];
+const cv=document.getElementById('cv1'),th=document.getElementById('th1'),bb=document.getElementById('b1');
+function draw(){
+const{ctx,W,H}=setup(cv);const S=Math.min(W,H)/11,X=x=>W/2+x*S,Y=y=>H/2-y*S;
+const t=+th.value*Math.PI/180,w=[Math.cos(t),Math.sin(t)],b=+bb.value;
+document.getElementById('th1o').textContent=(+th.value).toFixed(1)+'°';document.getElementById('b1o').textContent=b.toFixed(2);
+const s=P.map(p=>p[2]*(w[0]*p[0]+w[1]*p[1]+b)),m=Math.min.apply(null,s);
+ctx.clearRect(0,0,W,H);axes(ctx,W,H,X,Y);
+if(m>0){ctx.strokeStyle=css('--muted');ctx.lineWidth=1.2;ctx.setLineDash([6,5]);seg(ctx,X,Y,w[0],w[1],b-m);seg(ctx,X,Y,w[0],w[1],b+m);ctx.setLineDash([]);}
+ctx.strokeStyle=css('--ink');ctx.lineWidth=2;seg(ctx,X,Y,w[0],w[1],b);
+const o=[-b*w[0],-b*w[1]],e=[o[0]+w[0]*1.6,o[1]+w[1]*1.6],ac=css('--accent');
+ctx.strokeStyle=ac;ctx.fillStyle=ac;ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(X(o[0]),Y(o[1]));ctx.lineTo(X(e[0]),Y(e[1]));ctx.stroke();
+const ang=Math.atan2(-w[1],w[0]);ctx.beginPath();ctx.moveTo(X(e[0]),Y(e[1]));ctx.lineTo(X(e[0])-10*Math.cos(ang-0.4),Y(e[1])-10*Math.sin(ang-0.4));ctx.lineTo(X(e[0])-10*Math.cos(ang+0.4),Y(e[1])-10*Math.sin(ang+0.4));ctx.closePath();ctx.fill();
+ctx.font=MONO;ctx.fillText('w',X(e[0])+7,Y(e[1])-7);
+let err=0;const pos=css('--pos'),neg=css('--neg'),er=css('--err'),ink=css('--ink');
+P.forEach((p,i)=>{circ(ctx,X(p[0]),Y(p[1]),6);ctx.fillStyle=p[2]>0?pos:neg;ctx.fill();
+if(s[i]<0){err++;circ(ctx,X(p[0]),Y(p[1]),11);ctx.strokeStyle=er;ctx.lineWidth=2;ctx.stroke();}
+else if(m>0&&s[i]<=m+0.03){circ(ctx,X(p[0]),Y(p[1]),11);ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();}});
+document.getElementById('m1a').textContent=m>0?m.toFixed(2):'—';document.getElementById('m1b').textContent=m>0?(2*m).toFixed(2):'—';document.getElementById('m1c').textContent=err;}
+document.getElementById('best1').addEventListener('click',()=>{let bg=-1e9,bt=0,bv=0;for(let d=0;d<180;d+=0.25){const t=d*Math.PI/180,c=Math.cos(t),s=Math.sin(t);let mp=1e9,mn=-1e9;P.forEach(p=>{const v=c*p[0]+s*p[1];if(p[2]>0)mp=Math.min(mp,v);else mn=Math.max(mn,v);});const g=(mp-mn)/2;if(g>bg){bg=g;bt=d;bv=-(mp+mn)/2;}}th.value=bt;bb.value=Math.max(-4,Math.min(4,bv));draw();});
+th.addEventListener('input',draw);bb.addEventListener('input',draw);redraws.push(draw);draw();
+})();
+
+/* Thí nghiệm 3 · Iris hard margin */
+(function(){
+const SE=[[1.4,0.2],[1.3,0.2],[1.5,0.2],[1.7,0.4],[1.4,0.3],[1.5,0.1],[1.6,0.6],[1.9,0.4],[1.7,0.5],[1.0,0.2]];
+const VE=[[4.7,1.4],[4.5,1.5],[4.9,1.5],[4.0,1.3],[3.3,1.0],[3.9,1.4],[3.5,1.0],[3.0,1.1],[4.2,1.3],[3.6,1.3]];
+const D=SE.map(p=>[p[0],p[1],-1]).concat(VE.map(p=>[p[0],p[1],1]));
+let bg=-1e9,bu=[1,0],bb=0;for(let d=0;d<360;d+=0.05){const t=d*Math.PI/180,c=Math.cos(t),s=Math.sin(t);let mp=1e9,mn=-1e9;D.forEach(p=>{const v=c*p[0]+s*p[1];if(p[2]>0)mp=Math.min(mp,v);else mn=Math.max(mn,v);});const g=(mp-mn)/2;if(g>bg){bg=g;bu=[c,s];bb=-(mp+mn)/2;}}
+const w=[bu[0]/bg,bu[1]/bg],b=bb/bg,SV=D.map(p=>p[2]*(w[0]*p[0]+w[1]*p[1]+b)<=1.0005);
+const svs=D.filter((p,i)=>SV[i]).map(p=>'('+p[0].toFixed(1)+', '+p[1].toFixed(1)+')');
+document.getElementById('icalc').textContent='w = ('+w[0].toFixed(2)+', '+w[1].toFixed(2)+'),  b = '+b.toFixed(2)+',  ‖w‖ = '+Math.hypot(w[0],w[1]).toFixed(2);
+document.getElementById('ia').textContent=(2*bg).toFixed(2)+' cm';document.getElementById('ib').textContent=svs.join(' · ');
+const cv=document.getElementById('cvI');let test=null,last=null;
+function draw(){const o=plot(cv,[0.5,5.5],[0,2],{equal:true,maxS:120}),ctx=o.ctx,X=o.X,Y=o.Y;last=o;ctx.clearRect(0,0,o.W,o.H);
+const pos=css('--pos'),neg=css('--neg'),ink=css('--ink'),ac=css('--accent'),mu=css('--muted');
+o.clip();fillPoly(ctx,X,Y,o.rect,hexRgba(neg,0.10));fillPoly(ctx,X,Y,halfPoly(o.rect,w[0],w[1],b),hexRgba(pos,0.12));ctx.restore();
+frame(o,range(1,5,1),range(0,2,0.5),'chiều dài cánh hoa (cm)','chiều rộng (cm)');
+o.clip();ctx.strokeStyle=mu;ctx.lineWidth=1.2;ctx.setLineDash([6,5]);segR(ctx,X,Y,w[0],w[1],b-1,0.5,5.5,0,2);segR(ctx,X,Y,w[0],w[1],b+1,0.5,5.5,0,2);ctx.setLineDash([]);ctx.strokeStyle=ink;ctx.lineWidth=2;segR(ctx,X,Y,w[0],w[1],b,0.5,5.5,0,2);ctx.restore();
+D.forEach((p,i)=>{circ(ctx,X(p[0]),Y(p[1]),5.5);ctx.fillStyle=p[2]>0?pos:neg;ctx.fill();if(SV[i]){circ(ctx,X(p[0]),Y(p[1]),10);ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();}});
+ctx.font=MONO;ctx.fillStyle=ink;ctx.fillText('setosa',X(0.75),Y(0.85));ctx.textAlign='right';ctx.fillText('versicolor',X(5.35),Y(1.85));ctx.textAlign='left';
+if(test){const f=w[0]*test[0]+w[1]*test[1]+b;diamond(ctx,X(test[0]),Y(test[1]),9);ctx.strokeStyle=ac;ctx.lineWidth=2.5;ctx.stroke();
+document.getElementById('ic').textContent=(f>0?'Versicolor':'Setosa')+' · f = '+f.toFixed(2)+(Math.abs(f)<1?' (trong lề)':'');}}
+cv.addEventListener('click',ev=>{if(!last)return;const r=cv.getBoundingClientRect();const p=last.inv(ev.clientX-r.left,ev.clientY-r.top);test=[Math.min(5.5,Math.max(0.5,p[0])),Math.min(2,Math.max(0,p[1]))];draw();});
+cv.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();test=[2.6,0.8];draw();}});
+redraws.push(draw);draw();
+})();
+
+/* Thí nghiệm 4 · C slider */
+(function(){
+const D=[[2,2,1],[3,3,1],[1.5,3,1],[3,1,1],[2.5,2.5,1],[4,2,1],[1,1.5,1],[3.5,3.8,1],[-1.2,-0.4,1],[-2,-2,-1],[-3,-1,-1],[-1,-3,-1],[-2.5,-2.5,-1],[-1,-1.5,-1],[-3,-3,-1],[-3.8,-1.8,-1],[0.9,1.7,-1],[-0.2,-0.6,-1]];
+const cv=document.getElementById('cv2'),lc=document.getElementById('lc2');const cache={};
+function train(C){const k=C.toFixed(4);return cache[k]||(cache[k]=trainLin(D,C,1500));}
+function draw(){const C=Math.pow(10,+lc.value);document.getElementById('lc2o').textContent='C = '+(C<1?C.toFixed(2):C<10?C.toFixed(1):Math.round(C));
+const{w,a}=train(C);const{ctx,W,H}=setup(cv);const S=Math.min(W,H)/11,X=x=>W/2+x*S,Y=y=>H/2-y*S;
+ctx.clearRect(0,0,W,H);axes(ctx,W,H,X,Y);const nw=Math.hypot(w[0],w[1]);
+if(nw>1e-6){ctx.strokeStyle=css('--muted');ctx.lineWidth=1.2;ctx.setLineDash([6,5]);seg(ctx,X,Y,w[0],w[1],w[2]-1);seg(ctx,X,Y,w[0],w[1],w[2]+1);ctx.setLineDash([]);ctx.strokeStyle=css('--ink');ctx.lineWidth=2;seg(ctx,X,Y,w[0],w[1],w[2]);}
+let err=0,sv=0;const pos=css('--pos'),neg=css('--neg'),er=css('--err'),ink=css('--ink');
+D.forEach((p,i)=>{const f=p[2]*(w[0]*p[0]+w[1]*p[1]+w[2]);circ(ctx,X(p[0]),Y(p[1]),6);ctx.fillStyle=p[2]>0?pos:neg;ctx.fill();
+if(a[i]>1e-6){sv++;circ(ctx,X(p[0]),Y(p[1]),11);ctx.strokeStyle=ink;ctx.lineWidth=1.5;ctx.stroke();}
+if(f<0){err++;circ(ctx,X(p[0]),Y(p[1]),15);ctx.strokeStyle=er;ctx.lineWidth=2;ctx.stroke();}});
+document.getElementById('m2a').textContent=nw>1e-6?(2/nw).toFixed(2):'—';document.getElementById('m2b').textContent=sv+' / '+D.length;document.getElementById('m2c').textContent=err;}
+lc.addEventListener('input',draw);redraws.push(draw);draw();
+})();
+
+/* Thí nghiệm 5 · khoản vay + outlier */
+(function(){
+const G=[[25,20],[30,15],[18,25],[35,30],[22,10],[28,35],[40,20],[20,18],[32,42],[16,12]];
+const L=[[8,55],[12,60],[6,40],[10,70],[15,50],[9,30],[14,65],[18,58],[24,68],[5,22]];
+let out=[12,34],useOut=true;const NEW=[18,45];
+const nz=(i,d)=>[(i-20)/8,(d-40)/16];
+const cv=document.getElementById('cvL'),btn=document.getElementById('lo');let last=null,drag=false,mods=null;
+function fit(){const D=G.map(p=>nz(p[0],p[1]).concat([1])).concat(L.map(p=>nz(p[0],p[1]).concat([-1])));if(useOut)D.push(nz(out[0],out[1]).concat([1]));
+ const sf=trainLin(D,0.1,800).w,hd=trainLin(D,100,2500).w;
+ const err=w=>D.filter(p=>p[2]*(w[0]*p[0]+w[1]*p[1]+w[2])<0).length;mods={sf,hd,es:err(sf),eh:err(hd)};}
+const raw=w=>[w[0]/8,w[1]/16,w[2]-w[0]*20/8-w[1]*40/16];
+const pred=w=>{const r=raw(w);return r[0]*NEW[0]+r[1]*NEW[1]+r[2];};
+function draw(){if(!mods)fit();const o=plot(cv,[0,45],[0,80],{equal:false,height:320}),ctx=o.ctx,X=o.X,Y=o.Y;last=o;ctx.clearRect(0,0,o.W,o.H);
+const pos=css('--pos'),neg=css('--neg'),ink=css('--ink'),ac=css('--accent'),mu=css('--muted');
+frame(o,range(0,45,10),range(0,80,20),'thu nhập (triệu ₫/tháng)','nợ / thu nhập (%)');
+o.clip();const rs=raw(mods.sf),rh=raw(mods.hd);ctx.lineWidth=2.5;ctx.strokeStyle=mu;segR(ctx,X,Y,rs[0],rs[1],rs[2],0,45,0,80);ctx.strokeStyle=ac;segR(ctx,X,Y,rh[0],rh[1],rh[2],0,45,0,80);ctx.restore();
+G.forEach(p=>{circ(ctx,X(p[0]),Y(p[1]),6);ctx.fillStyle=pos;ctx.fill();});L.forEach(p=>{circ(ctx,X(p[0]),Y(p[1]),6);ctx.fillStyle=neg;ctx.fill();});
+if(useOut){circ(ctx,X(out[0]),Y(out[1]),7);ctx.fillStyle=pos;ctx.fill();circ(ctx,X(out[0]),Y(out[1]),12);ctx.strokeStyle=ac;ctx.lineWidth=2;ctx.stroke();ctx.font=MONO;ctx.fillStyle=ink;ctx.fillText('ngoại lệ',X(out[0])+15,Y(out[1])+4);}
+diamond(ctx,X(NEW[0]),Y(NEW[1]),9);ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.stroke();ctx.font=MONO;ctx.fillStyle=ink;ctx.fillText('khách mới',X(NEW[0])+12,Y(NEW[1])-8);
+const ps=pred(mods.sf),ph=pred(mods.hd);document.getElementById('la').textContent=ps>0?'Duyệt':'Từ chối';document.getElementById('lb').textContent=ph>0?'Duyệt':'Từ chối';document.getElementById('lc').textContent=mods.es+' / '+mods.eh;}
+function pt(ev){const r=cv.getBoundingClientRect();return[ev.clientX-r.left,ev.clientY-r.top];}
+cv.addEventListener('pointerdown',ev=>{if(!last||!useOut)return;const p=pt(ev);if(Math.hypot(p[0]-last.X(out[0]),p[1]-last.Y(out[1]))<22){drag=true;cv.setPointerCapture(ev.pointerId);}});
+cv.addEventListener('pointermove',ev=>{if(!drag)return;const q=last.inv.apply(null,pt(ev));out=[Math.min(44,Math.max(1,q[0])),Math.min(79,Math.max(1,q[1]))];fit();draw();});
+const end=()=>{drag=false;};cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+btn.addEventListener('click',()=>{useOut=!useOut;btn.textContent=useOut?'Bỏ khách hàng ngoại lệ':'Thêm lại khách hàng ngoại lệ';fit();draw();});
+redraws.push(draw);draw();
+})();
+
+/* Thí nghiệm 6 · 1D → 2D */
+(function(){
+const P=[[-3,-1],[-2.5,-1],[-2,-1],[-1.8,-1],[1.9,-1],[2.3,-1],[2.8,-1],[-1,1],[-0.6,1],[-0.2,1],[0.3,1],[0.7,1],[1.1,1]];
+const cv=document.getElementById('cv3'),cc=document.getElementById('c3'),btn=document.getElementById('lift3');let t=0,target=0;
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function draw(){const c=+cc.value,r=Math.sqrt(c);document.getElementById('c3o').textContent=c.toFixed(1);
+const{ctx,W,H}=setup(cv);const X=x=>W/2+x*W/7.5,Z=z=>H-38-z*(H-64)/9.5;
+ctx.clearRect(0,0,W,H);ctx.strokeStyle=css('--line');ctx.lineWidth=1;ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(0,Z(0));ctx.lineTo(W,Z(0));ctx.stroke();
+ctx.font=MONO;ctx.fillStyle=css('--muted');ctx.textAlign='right';ctx.fillText('x = lệch so với 24 °C',W-8,Z(0)-8);ctx.textAlign='left';
+if(t>0.01){ctx.globalAlpha=t;ctx.strokeStyle=css('--muted');ctx.lineWidth=1;ctx.beginPath();let first=true;for(let x=-3.3;x<=3.31;x+=0.05){const px=X(x),pz=Z(x*x);if(first){ctx.moveTo(px,pz);first=false;}else ctx.lineTo(px,pz);}ctx.stroke();
+ctx.fillStyle=css('--muted');ctx.fillText('z = x²',Math.min(W-60,X(2.9)+8),Z(8.4));
+ctx.strokeStyle=css('--ink');ctx.lineWidth=2;ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(0,Z(c));ctx.lineTo(W,Z(c));ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=css('--ink');ctx.fillText('z = c',8,Z(c)-7);ctx.globalAlpha=1;}
+const ac=css('--accent');ctx.strokeStyle=ac;ctx.lineWidth=2;[-r,r].forEach(x=>{ctx.beginPath();ctx.moveTo(X(x),Z(0)+12);ctx.lineTo(X(x),Math.min(Z(0)-12,Z(t*c)));ctx.stroke();});
+ctx.fillStyle=ac;ctx.fillText('−√c',X(-r)-14,Z(0)+28);ctx.fillText('+√c',X(r)-14,Z(0)+28);
+let ok=0;const pos=css('--pos'),neg=css('--neg');P.forEach(p=>{circ(ctx,X(p[0]),Z(t*p[0]*p[0]),6);ctx.fillStyle=p[1]>0?pos:neg;ctx.fill();if((p[1]>0)===(p[0]*p[0]<c))ok++;});
+document.getElementById('m3a').textContent=ok+' / '+P.length;document.getElementById('m3b').textContent='24 ± '+r.toFixed(1)+' °C';}
+function anim(){if(reduce){t=target;draw();return;}const d=target-t;if(Math.abs(d)>0.005){t+=d*0.12;draw();requestAnimationFrame(anim);}else{t=target;draw();}}
+btn.addEventListener('click',()=>{target=target?0:1;btn.textContent=target?'Hạ về 1D':'Nâng lên 2D';anim();});
+cc.addEventListener('input',draw);redraws.push(draw);draw();
+})();
+
+/* Thí nghiệm 7 · RBF vùng giao hàng */
+(function(){
+let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return(seed-1)/2147483646;};
+const DEP=[[-2,0,1.8],[2.3,0.6,1.3]];const R=[];
+for(let i=0;i<70;i++){const x=rnd()*10-5,y=rnd()*6-3;const inside=DEP.some(d=>Math.hypot(x-d[0],y-d[1])<d[2]);R.push([x,y,inside?1:-1]);}
+R[9][2]*=-1;
+const cv=document.getElementById('cvR'),rs=document.getElementById('rs'),rc=document.getElementById('rc'),bl=document.getElementById('rlin');
+let linear=false,key='',model=null;
+function kern(a,b,s){return linear?(a[0]*b[0]+a[1]*b[1]+1):(Math.exp(-((a[0]-b[0])**2+(a[1]-b[1])**2)/(2*s*s))+1);}
+function fit(s,C){const n=R.length,K=[];for(let i=0;i<n;i++){K.push(new Float64Array(n));for(let j=0;j<n;j++)K[i][j]=kern(R[i],R[j],s);}
+ const a=new Float64Array(n),f=new Float64Array(n);
+ for(let e=0;e<400;e++){for(let i=0;i<n;i++){const y=R[i][2],G=y*f[i]-1,na=Math.min(Math.max(a[i]-G/K[i][i],0),C),d=(na-a[i])*y;if(d){for(let j=0;j<n;j++)f[j]+=d*K[i][j];a[i]=na;}}}
+ const sv=[];for(let i=0;i<n;i++)if(a[i]>1e-6)sv.push(i);
+ let ok=0;for(let i=0;i<n;i++)if(R[i][2]*f[i]>0)ok++;return{a,sv,ok,s};}
+const dec=(m,x,y)=>{let s=0;for(const i of m.sv)s+=m.a[i]*R[i][2]*kern(R[i],[x,y],m.s);return s;};
+function draw(){const s=+rs.value,C=Math.pow(10,+rc.value);document.getElementById('rso').textContent=s.toFixed(2);document.getElementById('rco').textContent='C = '+(C<10?C.toFixed(1):Math.round(C));
+const k=s+'|'+C+'|'+linear;if(k!==key){model=fit(s,C);key=k;}
+const o=plot(cv,[-5,5],[-3,3],{equal:true,maxS:64}),ctx=o.ctx,X=o.X,Y=o.Y;ctx.clearRect(0,0,o.W,o.H);
+const pos=css('--pos'),neg=css('--neg'),ink=css('--ink');
+const cell=6,x0=X(-5),y0=Y(3),cw=Math.ceil((X(5)-x0)/cell),ch=Math.ceil((Y(-3)-y0)/cell),grid=[];
+for(let j=0;j<ch;j++){grid.push(new Float64Array(cw));for(let i=0;i<cw;i++){const p=o.inv(x0+(i+0.5)*cell,y0+(j+0.5)*cell);grid[j][i]=dec(model,p[0],p[1]);}}
+for(let j=0;j<ch;j++)for(let i=0;i<cw;i++){const v=grid[j][i];ctx.fillStyle=hexRgba(v>0?pos:neg,0.08+0.18*Math.min(1,Math.abs(v)));ctx.fillRect(x0+i*cell,y0+j*cell,cell+0.5,cell+0.5);}
+ctx.fillStyle=hexRgba(ink,0.75);for(let j=0;j<ch;j++)for(let i=0;i<cw;i++){const v=grid[j][i];if((i+1<cw&&(v>0)!==(grid[j][i+1]>0))||(j+1<ch&&(v>0)!==(grid[j+1][i]>0)))ctx.fillRect(x0+i*cell+cell/2-1,y0+j*cell+cell/2-1,3,3);}
+frame(o,range(-4,4,2),range(-2,2,2),'km (đông–tây)','km (bắc–nam)');
+R.forEach((p,i)=>{circ(ctx,X(p[0]),Y(p[1]),4.5);ctx.fillStyle=p[2]>0?pos:neg;ctx.fill();if(model.a[i]>1e-6){circ(ctx,X(p[0]),Y(p[1]),8);ctx.strokeStyle=ink;ctx.lineWidth=1.2;ctx.stroke();}});
+ctx.font=MONO;DEP.forEach((d,i)=>{ctx.fillStyle=ink;ctx.fillRect(X(d[0])-5,Y(d[1])-5,10,10);ctx.fillText('kho '+(i+1),X(d[0])+9,Y(d[1])-8);});
+document.getElementById('ra').textContent=linear?'Tuyến tính':'RBF';document.getElementById('rb').textContent=model.ok+' / '+R.length;document.getElementById('rcn').textContent=model.sv.length;}
+rs.addEventListener('input',draw);rc.addEventListener('input',draw);
+bl.addEventListener('click',()=>{linear=!linear;bl.textContent=linear?'Quay lại kernel RBF':'So sánh với kernel tuyến tính';rs.disabled=linear;draw();});
+redraws.push(draw);draw();
+})();
+
+const all=()=>redraws.forEach(f=>f());
+let rt=null;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(all,80);});
+try{window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',all);}catch(e){}
+new MutationObserver(all).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(all);
+})();
+</script>
+
+</body>
+</html>
